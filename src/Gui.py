@@ -15,7 +15,7 @@ PATH = os.path.dirname(os.path.realpath(__file__))
 
 class App(customtkinter.CTk):
     WIDTH = 750
-    HEIGHT = 700
+    HEIGHT = 600
 
     def __init__(self):
         super().__init__()
@@ -103,12 +103,12 @@ class App(customtkinter.CTk):
                                                 variable=self.checkbox_var_RHand, onvalue="on", offvalue="off")
         self.right_hand_roi_choice.grid(row=1, column=2, pady=10, padx=20, sticky="n")
 
-        self.left_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
+        self.left_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Left Hand  ",
                                                 command=self.toggle_state(self.checkbox_var_LHand),
                                                 variable=self.checkbox_var_LHand, onvalue="on", offvalue="off")
         self.left_hand_roi_choice.grid(row=2, column=2, pady=10, padx=20, sticky="n")
 
-        self.pose_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
+        self.pose_roi_choice = CTkCheckBox(master=self.frame_right, text="Pose          ",
                                            command=self.toggle_state(self.checkbox_var_pose),
                                            variable=self.checkbox_var_pose, onvalue="on", offvalue="off")
         self.pose_roi_choice.grid(row=3, column=2, pady=10, padx=20, sticky="n")
