@@ -3,8 +3,8 @@ from tkinter import *
 import customtkinter
 from PIL import Image, ImageTk  # <- import PIL for the images
 from customtkinter import CTkCheckBox
+from resources.videoGenerator import *
 
-from VMSM.src.resources.videoGenerator import Video
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -40,7 +40,7 @@ class App(customtkinter.CTk):
 
         # ============load_images=============
         # load images as PhotoImage
-        image_size = 30
+        image_size = 35
 
         file_explore_image = ImageTk.PhotoImage(
             Image.open(PATH + "\\resources\\images\\FileExplore.png").resize((image_size, image_size),
@@ -92,8 +92,8 @@ class App(customtkinter.CTk):
         # configure grid layout (1x1)
         self.frame_info.rowconfigure(0, weight=1)
         self.frame_info.columnconfigure(0, weight=1)
-        self.progressbar = customtkinter.CTkProgressBar(master=self.frame_info)
-        self.progressbar.grid(row=1, column=0, sticky="ew", padx=15, pady=15)
+        # self.progressbar = customtkinter.CTkProgressBar(master=self.frame_info)
+        # self.progressbar.grid(row=1, column=0, sticky="ew", padx=15, pady=15)
 
         # ============ frame_right ============
 
@@ -142,7 +142,7 @@ class App(customtkinter.CTk):
         self.slider_button_2.grid(row=6, column=0, columnspan=3, pady=10, padx=135, sticky="W")
         self.Theme_switch.select()
         self.slider_2.set(0.0)
-        self.progressbar.set(0.0)
+        # self.progressbar.set(0.0)
 
     def toggle_state(self, var):
         var.set(1 - var.get())
