@@ -1,49 +1,14 @@
 import os
 from tkinter import *
-from tkinter import filedialog
 import customtkinter
 from PIL import Image, ImageTk  # <- import PIL for the images
-from moviepy.editor import *
-from tkvideo import tkvideo
+from customtkinter import CTkCheckBox
 
-from VMSM.src.resources.videoGenerator import VideoGenerator
-
-PATH = os.path.dirname(os.path.realpath(__file__))
+from VMSM.src.resources.videoGenerator import Video
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
-
-
-class Video():
-    def __init__(self, frame):
-        root = frame
-        my_label = Label(root)
-
-        my_label.pack()
-
-        path = self.video_loader_btn_handler()
-        if path is not False:
-            player = tkvideo(path, my_label, loop=1, size=(350, 250))
-            player.play()
-
-    def video_loader_btn_handler(self):
-        filename_path = filedialog.askopenfilename(initialdir=PATH,
-                                                   title="Select a File",
-                                                   filetypes=(("Video files",
-                                                               "*.mp4*"),
-                                                              ))
-
-        if filename_path == "" or filename_path == " ":
-            return False
-
-        print(filename_path)
-
-        # clip = VideoFileClip(filename_path)
-        #
-        # # previewing the clip at fps = 10
-        # clip.without_audio().preview(fps=10)
-
-        return str(filename_path)
+PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class App(customtkinter.CTk):
@@ -107,29 +72,10 @@ class App(customtkinter.CTk):
                                                         width=30, height=30,
                                                         compound="right", command=self.video_handler)
         self.report_image_btn.grid(row=3, column=0, pady=10, padx=20)
-
-
-
-        # self.button_2 = customtkinter.CTkButton(master=self.frame_left,
-        #                                         text="CTkButton 2",
-        #                                         fg_color=("gray75", "gray30"),  # <- custom tuple-color
-        #                                         command=self.button_event)
-        # self.button_2.grid(row=3, column=0, pady=10, padx=20)
-
-        # self.button_3 = customtkinter.CTkButton(master=self.frame_left,
-        #                                         text="CTkButton 3",
-        #                                         fg_color=("gray75", "gray30"),  # <- custom tuple-color
-        #                                         command=self.button_event)
-        # self.button_3.grid(row=4, column=0, pady=10, padx=20)
-
-        self.switch_1 = customtkinter.CTkSwitch(master=self.frame_left)
-        self.switch_1.grid(row=9, column=0, pady=10, padx=20, sticky="w")
-
-        self.switch_2 = customtkinter.CTkSwitch(master=self.frame_left,
-                                                text="Dark Mode",
-                                                command=self.change_mode)
-        self.switch_2.grid(row=10, column=0, pady=10, padx=20, sticky="w")
-
+        self.Theme_switch = customtkinter.CTkSwitch(master=self.frame_left,
+                                                    text="Dark Mode",
+                                                    command=self.change_mode)
+        self.Theme_switch.grid(row=10, column=0, pady=10, padx=20, sticky="w")
         # ============ frame_right ============
 
         # configure grid layout (3x7)
@@ -146,62 +92,40 @@ class App(customtkinter.CTk):
         # configure grid layout (1x1)
         self.frame_info.rowconfigure(0, weight=1)
         self.frame_info.columnconfigure(0, weight=1)
-
-        # self.label_info_1 = customtkinter.CTkLabel(master=self.frame_info,
-        #                                            text="CTkLabel: Lorem ipsum dolor sit,\n" +
-        #                                                 "amet consetetur sadipscing elitr,\n" +
-        #                                                 "sed diam nonumy eirmod tempor" ,
-        #                                            height=100,
-        #                                            fg_color=("white", "gray38"),  # <- custom tuple-color
-        #                                            justify=tkinter.LEFT)
-        # self.label_info_1.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
-
         self.progressbar = customtkinter.CTkProgressBar(master=self.frame_info)
         self.progressbar.grid(row=1, column=0, sticky="ew", padx=15, pady=15)
 
         # ============ frame_right ============
 
-        self.radio_var = IntVar(value=0)
+        self.radio_var_RHand = IntVar(value=0)
+        self.radio_var_LHand = IntVar(value=0)
+        self.radio_var_pose = IntVar(value=0)
 
         self.roi_label = customtkinter.CTkLabel(master=self.frame_right,
                                                 text="Select ROIs:",
                                                 text_font=("Calibri Bold", -20))
         self.roi_label.grid(row=0, column=2, columnspan=1, pady=20, padx=10, sticky="")
+        self.right_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
+                                                 command=self.toggle_state(self.radio_var_RHand),
+                                                 variable=self.radio_var_RHand, onvalue="on", offvalue="off")
 
-        self.right_hand_roi_choice = customtkinter.CTkRadioButton(master=self.frame_right,
-                                                                  text="Right Hand",
-                                                                  variable=self.radio_var,
-                                                                  value=0)
         self.right_hand_roi_choice.grid(row=1, column=2, pady=10, padx=20, sticky="n")
 
-        self.left_hand_roi_choice = customtkinter.CTkRadioButton(master=self.frame_right,
-                                                                 text="Left Hand  ",
-                                                                 variable=self.radio_var,
-                                                                 value=1)
+        self.left_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
+                                                command=self.toggle_state(self.radio_var_LHand),
+                                                variable=self.radio_var_LHand, onvalue="on", offvalue="off")
+
         self.left_hand_roi_choice.grid(row=2, column=2, pady=10, padx=20, sticky="n")
+        self.pose_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
+                                           command=self.toggle_state(self.radio_var_pose),
+                                           variable=self.radio_var_pose, onvalue="on", offvalue="off")
 
-        self.pose_roi_choice = customtkinter.CTkRadioButton(master=self.frame_right,
-                                                            text="Pose          ",
-                                                            variable=self.radio_var,
-                                                            value=2)
         self.pose_roi_choice.grid(row=3, column=2, pady=10, padx=20, sticky="n")
-
-        # self.slider_1 = customtkinter.CTkSlider(master=self.frame_right,
-        #                                         from_=0,
-        #                                         to=1,
-        #                                         number_of_steps=3,
-        #                                         command=self.progressbar.set)
-        # self.slider_1.grid(row=4, column=0, columnspan=2, pady=10, padx=20, sticky="we")
 
         self.temp_label = customtkinter.CTkLabel(master=self.frame_right,
                                                  text="Percentage Deviation: ",
                                                  text_font=("Calibri Bold", -20))  # font name and size in px
         self.temp_label.grid(row=4, column=0, columnspan=2, pady=10, sticky="NS")
-        # self.temp_label2 = customtkinter.CTkLabel(master=self.frame_right,
-        #                                           text="",
-        #                                           text_font=("Calibri Bold", -20))  # font name and size in px
-        # self.temp_label2.grid(row=4, column=2, columnspan=1, sticky="W")
-
         self.slider_2 = customtkinter.CTkSlider(master=self.frame_right,
                                                 command=self.MyHandler, from_=0, to=1)
         self.slider_2.grid(row=5, column=0, columnspan=1, pady=10, padx=125, sticky="NS")
@@ -216,19 +140,12 @@ class App(customtkinter.CTk):
                                                        text_font=("Calibri Bold", -18),
                                                        command=self.button_event)
         self.slider_button_2.grid(row=6, column=0, columnspan=3, pady=10, padx=135, sticky="W")
-
-        # self.entry = customtkinter.CTkEntry(master=self.frame_right,
-        #                                     width=120,
-        #                                     placeholder_text="CTkEntry")
-        # self.entry.grid(row=8, column=0, columnspan=2, pady=20, padx=20, sticky="we")
-
-        # set default values
-        self.right_hand_roi_choice.select()
-        self.switch_2.select()
-        # self.slider_1.set(0.2)
+        self.Theme_switch.select()
         self.slider_2.set(0.0)
         self.progressbar.set(0.0)
-        # self.pose_roi_choice.configure(state=tkinter.DISABLED)
+
+    def toggle_state(self, var):
+        var.set(1 - var.get())
 
     def MyHandler(self, val):
         #  self.progressbar.set(val)
@@ -236,9 +153,9 @@ class App(customtkinter.CTk):
 
     def video_handler(self):
         video_frame = customtkinter.CTkFrame(self.frame_info)
-        #path = self.video_loader_btn_handler()
+        # path = self.video_loader_btn_handler()
         video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
-        #VideoGenerator(video_frame)
+        # VideoGenerator(video_frame)
 
         Video(video_frame)
 
@@ -246,7 +163,7 @@ class App(customtkinter.CTk):
         print("Button pressed")
 
     def change_mode(self):
-        if self.switch_2.get() == 1:
+        if self.Theme_switch.get() == 1:
             customtkinter.set_appearance_mode("dark")
         else:
             customtkinter.set_appearance_mode("light")

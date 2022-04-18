@@ -6,14 +6,12 @@ from tkinter import filedialog
 import imageio
 from PIL import Image, ImageTk
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from tkvideo import tkvideo
 
 global pause_video
 
+
 # download video at: http://www.html5videoplayer.net/videos/toystory.mp4
-
-
-video_path = "toystory.mp4"
-
 
 class VideoGenerator:
 
@@ -38,7 +36,6 @@ class VideoGenerator:
                     my_label.config(image=frame)
 
                 root.update()
-
 
     def video_frame_generator(self):
         def current_time():
@@ -94,4 +91,37 @@ class VideoGenerator:
         # previewing the clip at fps = 10
         clip.without_audio().preview(fps=10)
         return False
+        return str(filename_path)
+
+
+class Video():
+    def __init__(self, frame):
+        root = frame
+        my_label = tk.Label(root)
+
+        my_label.pack()
+
+        path = self.video_loader_btn_handler()
+        if path is not False:
+            player = tkvideo(path, my_label, loop=1, size=(350, 250))
+            player.play()
+
+    def video_loader_btn_handler(self):
+        PATH = os.path.dirname(os.path.realpath(__file__))
+        filename_path = filedialog.askopenfilename(initialdir=PATH,
+                                                   title="Select a File",
+                                                   filetypes=(("Video files",
+                                                               "*.mp4*"),
+                                                              ))
+
+        if filename_path == "" or filename_path == " ":
+            return False
+
+        print(filename_path)
+
+        # clip = VideoFileClip(filename_path)
+        #
+        # # previewing the clip at fps = 10
+        # clip.without_audio().preview(fps=10)
+
         return str(filename_path)
