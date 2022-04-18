@@ -21,9 +21,10 @@ class Video():
         my_label.pack()
 
         path = self.video_loader_btn_handler()
-        player = tkvideo(path, my_label, loop=1, size=(450, 350))
+        if path is not False:
+            player = tkvideo(path, my_label, loop=1, size=(450, 350))
 
-        player.play()
+            player.play()
 
     def video_loader_btn_handler(self):
         filename_path = filedialog.askopenfilename(initialdir=PATH,
@@ -31,8 +32,8 @@ class Video():
                                                    filetypes=(("Video files",
                                                                "*.mp4*"),
                                                     ))
-        if filename_path == "":
-            return
+        if filename_path == "" or filename_path == " ":
+            return False
 
         print(filename_path)
 
