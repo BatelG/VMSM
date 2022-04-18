@@ -1,12 +1,10 @@
 import os
 from tkinter import *
-import tkinter.messagebox
 from tkinter import filedialog
+
 from tkvideo import tkvideo
 import customtkinter
-
 from PIL import Image, ImageTk  # <- import PIL for the images
-
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -28,8 +26,7 @@ class Video():
         player.play()
 
     def video_loader_btn_handler(self):
-        init = "C:\\Users\\batel\\Desktop\\Projects\\MediaPipe\\Videos" #TODO: change path
-        filename_path = filedialog.askopenfilename(initialdir=init,
+        filename_path = filedialog.askopenfilename(initialdir=PATH,
                                                    title="Select a File",
                                                    filetypes=(("Video files",
                                                                "*.mp4*"),
@@ -144,7 +141,7 @@ class App(customtkinter.CTk):
 
         # ============ frame_right ============
 
-        self.radio_var = tkinter.IntVar(value=0)
+        self.radio_var = IntVar(value=0)
 
         self.roi_label = customtkinter.CTkLabel(master=self.frame_right,
                                                         text="Select ROI:",
@@ -224,9 +221,9 @@ class App(customtkinter.CTk):
         self.slider_1.set(0.2)
         self.slider_2.set(0.7)
         self.progressbar.set(0.5)
-        self.slider_file_explore_btn.configure(state=tkinter.DISABLED, text="Disabled Button")
+        self.slider_file_explore_btn.configure(state=DISABLED, text="Disabled Button")
         #self.pose_roi_choice.configure(state=tkinter.DISABLED)
-        self.check_box_1.configure(state=tkinter.DISABLED, text="CheckBox disabled")
+        self.check_box_1.configure(state=DISABLED, text="CheckBox disabled")
         self.check_box_2.select()
 
     def video_handler(self):
