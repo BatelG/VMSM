@@ -1,0 +1,4 @@
+tkVideo
+customtkinter
+reportlab
+pylint
