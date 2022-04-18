@@ -1,3 +1,4 @@
 tkVideo
+customtkinter
 reportlab
 pylint

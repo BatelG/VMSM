@@ -22,5 +22,5 @@
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.linting.pycodestyleArgs": ["--ignore=E501"],
-    "python.linting.pylintArgs": ["-d, C0301,C0103,C0111,W0311,W1202,W1203,W0108,W0703"]
+    "python.linting.pylintArgs": ["-d, C0301,C0103,C0111,W0311,W1202,W1203,W0108,W0401,W0613,W0614,W0703,R0902"]
 }
