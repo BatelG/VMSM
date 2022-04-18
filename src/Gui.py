@@ -1,10 +1,11 @@
 import os
+import time
 from tkinter import *
 import customtkinter
 from PIL import Image, ImageTk  # <- import PIL for the images
 from customtkinter import CTkCheckBox
-from resources.videoGenerator import *
 
+from resources.videoGenerator import *
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -42,11 +43,11 @@ class App(customtkinter.CTk):
         # load images as PhotoImage
         image_size = 35
 
-        file_explore_image = ImageTk.PhotoImage(
+        self.file_explore_image = ImageTk.PhotoImage(
             Image.open(PATH + "\\resources\\images\\FileExplore.png").resize((image_size, image_size),
                                                                              Image.Resampling.LANCZOS))
 
-        report_image = ImageTk.PhotoImage(
+        self.report_image = ImageTk.PhotoImage(
             Image.open(PATH + "\\resources\\images\\report_icon.png").resize((image_size, image_size),
                                                                              Image.Resampling.LANCZOS))
 
@@ -63,15 +64,13 @@ class App(customtkinter.CTk):
                                                   text_font=("Calibri Bold", -20))  # font name and size in px
         self.video_label.grid(row=1, column=0, pady=10, padx=10)
 
-        self.file_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=file_explore_image, text="",
+        self.file_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_explore_image, text="",
                                                         width=30, height=30,
                                                         compound="right", command=self.video_handler)
         self.file_explore_btn.grid(row=2, column=0, pady=10, padx=20)
 
-        self.report_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image, text="",
-                                                        width=30, height=30,
-                                                        compound="right", command=self.video_handler)
-        self.report_image_btn.grid(row=3, column=0, pady=10, padx=20)
+
+
         self.Theme_switch = customtkinter.CTkSwitch(master=self.frame_left,
                                                     text="Dark Mode",
                                                     command=self.change_mode)
@@ -160,7 +159,32 @@ class App(customtkinter.CTk):
         Video(video_frame)
 
     def button_event(self):
-        print("Button pressed")
+        time.sleep(1)
+        PopUp = Tk()
+        PopUp.title("PopUp")
+        PopUp.geometry(f"{440}x{130}")
+
+        self.report_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.report_image, text="",
+                                                        width=30, height=30,
+                                                        compound="right", command=self.video_handler)
+        self.report_image_btn.grid(row=3, column=0, pady=10, padx=20)
+
+        self.ok_btn = customtkinter.CTkButton(master=PopUp, text="Ok",
+                                              width=70, height=40,
+                                              fg_color='gray',
+                                              hover_color='green',
+                                              compound="right", command=PopUp.destroy)
+        self.ok_btn.grid(row=1, column=3, padx=200, sticky=NS)
+
+        self.popup_label = customtkinter.CTkLabel(master=PopUp,
+                                                  text="The Interpersonal Synchrony Analysis\nCompleted Successfully !",
+                                                  text_color='black',
+                                                  text_font=("Calibri Bold", -20))  # font name and size in px
+        self.popup_label.grid(row=0, column=3, pady=10, padx=1)
+        PopUp.mainloop()
+
+    # self.minsize(App.WIDTH, App.HEIGHT)
+    # PopUp.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def change_mode(self):
         if self.Theme_switch.get() == 1:
