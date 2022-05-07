@@ -144,61 +144,103 @@ class App(customtkinter.CTk):
     def start_btn_handler(self):
         time.sleep(1)
 
-        success_popup = Tk()
+        # at least one ROI has to be selected
+        if "on" not in [self.right_hand_roi_choice.get(), self.left_hand_roi_choice.get(), self.pose_roi_choice.get()]:
+            fail_popup = Tk()
 
-        success_popup.title("Success")
-        success_popup.geometry(f"{440}x{130}")
+            fail_popup.title("Fail")
+            fail_popup.geometry(f"{440}x{130}")
 
-        report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
-                                            text_font=("Calibri Bold", -20))  # font name and size in px
-        report_lbl.grid(row=3, column=0, pady=10, padx=10)
+            select_type_lbl = customtkinter.CTkLabel(master=fail_popup,
+                                                text="At least one ROI has to be selceted.\nPlease try again.",
+                                                text_color='black', text_font=("Calibri Bold", -20))
+            select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
 
-        report_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.report_image,
-                                                    text="", width=30, height=30,
-                                                    compound="right", command=self.report_btn_handler)
-        report_image_btn.grid(row=4, column=0, pady=10, padx=20)
+            ok_btn = customtkinter.CTkButton(master=fail_popup, text="Ok", width=70, height=40,
+                                            fg_color='gray', hover_color='green', compound="right", 
+                                            command=fail_popup.destroy)
+            ok_btn.grid(row=1, column=3, padx=190, sticky=NS)
 
-        select_type_lbl = customtkinter.CTkLabel(master=success_popup,
-                                            text="The Interpersonal Synchrony Analysis\nCompleted Successfully !",
-                                            text_color='black', text_font=("Calibri Bold", -20))
-        select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
+            fail_popup.mainloop()
+        else:
+            success_popup = Tk()
 
-        ok_btn = customtkinter.CTkButton(master=success_popup, text="Ok", width=70, height=40,
-                                        fg_color='gray', hover_color='green', compound="right", 
-                                        command=success_popup.destroy)
-        ok_btn.grid(row=1, column=3, padx=190, sticky=NS)
+            success_popup.title("Success")
+            success_popup.geometry(f"{440}x{130}")
 
-        success_popup.mainloop()
+            report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
+                                                text_font=("Calibri Bold", -20))  # font name and size in px
+            report_lbl.grid(row=3, column=0, pady=10, padx=10)
+
+            report_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.report_image,
+                                                        text="", width=30, height=30,
+                                                        compound="right", command=self.report_btn_handler)
+            report_image_btn.grid(row=4, column=0, pady=10, padx=20)
+
+            select_type_lbl = customtkinter.CTkLabel(master=success_popup,
+                                                text="The Interpersonal Synchrony Analysis\nCompleted Successfully !",
+                                                text_color='black', text_font=("Calibri Bold", -20))
+            select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
+
+            ok_btn = customtkinter.CTkButton(master=success_popup, text="Ok", width=70, height=40,
+                                            fg_color='gray', hover_color='green', compound="right", 
+                                            command=success_popup.destroy)
+            ok_btn.grid(row=1, column=3, padx=190, sticky=NS)
+
+            success_popup.mainloop()
 
     def report_btn_handler(self):
         checkbox_var_txt = IntVar(value=0)
         checkbox_var_pdf = IntVar(value=0)
 
-        export_popup = Tk()
+        self.export_popup = Tk()
 
-        export_popup.title("Export Results to Report")
-        export_popup.geometry(f"{300}x{200}")
+        self.export_popup.title("Export Results to Report")
+        self.export_popup.geometry(f"{300}x{200}")
 
-        txt_choice = CTkCheckBox(master=export_popup, text=".txt report  ", text_color='black',
+        self.txt_choice = CTkCheckBox(master=self.export_popup, text=".txt report  ", text_color='black',
                                 command=self.toggle_state(checkbox_var_txt),
                                 variable=checkbox_var_txt, onvalue="on", offvalue="off")
-        txt_choice.grid(row=1, column=0, pady=10, padx=60)
+        self.txt_choice.grid(row=1, column=0, pady=10, padx=60)
 
-        pdf_choice = CTkCheckBox(master=export_popup, text=".pdf report", text_color='black',
+        self.pdf_choice = CTkCheckBox(master=self.export_popup, text=".pdf report", text_color='black',
                                 command=self.toggle_state(checkbox_var_pdf),
                                 variable=checkbox_var_pdf, onvalue="on", offvalue="off")
-        pdf_choice.grid(row=2, column=0, pady=10, padx=60)
+        self.pdf_choice.grid(row=2, column=0, pady=10, padx=60)
 
-        select_type_lbl = customtkinter.CTkLabel(master=export_popup, text="Select Report type:",
+        select_type_lbl = customtkinter.CTkLabel(master=self.export_popup, text="Select Report type:",
                                                 text_color='black', text_font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=0, pady=10, padx=60)
 
-        export_btn = customtkinter.CTkButton(master=export_popup, text="Export", width=70, height=40,
+        export_btn = customtkinter.CTkButton(master=self.export_popup, text="Export", width=70, height=40,
                                             fg_color='gray', hover_color='green',
-                                            compound="right", command=export_popup.destroy) #TODO: download files
+                                            compound="right", command=self.export_report)
         export_btn.grid(row=3, column=0, pady=10, padx=60)
 
-        export_popup.mainloop()
+        self.export_popup.mainloop()
+
+    def export_report(self):
+        # at least one report type has to be selected
+        if "on" not in [self.txt_choice.get(), self.pdf_choice.get()]:
+            fail_popup = Tk()
+
+            fail_popup.title("Fail")
+            fail_popup.geometry(f"{440}x{130}")
+
+            select_type_lbl = customtkinter.CTkLabel(master=fail_popup,
+                                                text="At least one report type has to be selceted.\nPlease try again.",
+                                                text_color='black', text_font=("Calibri Bold", -20))
+            select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
+
+            ok_btn = customtkinter.CTkButton(master=fail_popup, text="Ok", width=70, height=40,
+                                            fg_color='gray', hover_color='green', compound="right", 
+                                            command=fail_popup.destroy)
+            ok_btn.grid(row=1, column=3, padx=190, sticky=NS)
+
+            fail_popup.mainloop()
+        else:
+            self.export_popup.destroy() # temporary
+            #TODO: use file system to download the selected report files
 
     def change_mode(self):
         if self.Theme_switch.get() == 1:
