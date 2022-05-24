@@ -14,6 +14,10 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 PATH = os.path.dirname(os.path.realpath(__file__))
 
 
+# TODO: think about all the cases where pop up windows need to be closed
+# TODO: think of all the cases where the data need to be reset for new data (e.g. new video)
+# TODO: save empty .txt and .pdf files
+# TODO: disable/unable labels/buttons
 class App(customtkinter.CTk):
     WIDTH = 850
     HEIGHT = 600
@@ -130,9 +134,9 @@ class App(customtkinter.CTk):
                                                 command=self.__start_btn_handler)
         self.start_btn.grid(row=6, column=0, columnspan=3, pady=10, padx=135, sticky="w")
 
-    # set the shown values for the 'Percentage Deviation' slider
+    # set the shown float values in format .2f for the 'Percentage Deviation' slider
     def __prec_slider_handler(self, val):
-        self.perc_dev_lbl.set_text('Percentage Deviation: %.2f' % val)
+        self.perc_dev_lbl.set_text(f"Percentage Deviation: {round(val, 2)}")
 
     # upload video and set the frame for it
     def __video_btn_handler(self):
@@ -141,7 +145,7 @@ class App(customtkinter.CTk):
         video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
         # VideoGenerator(video_frame)
 
-        Video(video_frame)
+        self.video = Video(video_frame)
 
     # handler for pressing 'Start Analysis' button
     def __start_btn_handler(self):
@@ -162,22 +166,59 @@ class App(customtkinter.CTk):
             message = "At least one ROI has to be selceted.\nPlease try again."
 
             self.__message(title, message, "ok")
+
+        # video wasn't uploaded
+        if not hasattr(self, 'video'):
+            # pop a fail message
+            title = "Start Fail"
+            message = "A video must be uploaded.\nPlease try again."
+
+            self.__message(title, message, "ok")
+
         else:
             # add option to export the analysis result reports (set label and button)
-            report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
+            self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
                                                 text_font=("Calibri Bold", -20)) # font name and size in px
-            report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
+            self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
 
-            file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
+            self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
                                                         text="", width=30, height=30,
                                                         compound="right", command=self.__report_btn_handler)
-            file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
+            self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
+
+            # show to the user the synchronization rate
+            # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value !
+            # TODO: in the future, send the grade as is, without 'round' method (?)
+            sync_rate, padx, color = self.__get_synchronization_rate(round(self.slider.get(), 2))
+
+            # set the 'Synchronization Rate' label
+            self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, text_font=("Calibri Bold", -20))
+            self.sync_rate_lbl.grid(row=7, column=0, columnspan=3, pady=10, sticky="nw")
+
+            # configure the right values, according to the grade
+            self.sync_rate_lbl.configure(text=sync_rate, text_color=color)
+            self.sync_rate_lbl.grid(padx=padx)
 
             # pop a success message
             title = "Start Success"
             message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
 
             self.__message(title, message, "ok")
+
+    # get the synchronization rate and label configuration values, according to the grade
+    def __get_synchronization_rate(self, grade):
+        if grade < 0 or grade > 1:
+            raise ValueError("The grade isn't normalized number !")
+
+        # the second value in 'range' method doesn't count
+        if 0 <= grade <= 0.33:
+            return "Weak Synchronization", 100, '#FF3200'
+        if 0.34 <= grade <= 0.66:
+            return "Medium Synchronization", 92, '#FF9B00'
+        if 0.67 <= grade <= 0.95:
+            return "Strong Synchronization", 88, '#C2C000'
+        if 0.96 <= grade <= 1:
+            return "Perfect Synchronization", 88, '#359C25'
 
     # handler for pressing the 'Reports Producer' button
     def __report_btn_handler(self):
@@ -275,7 +316,6 @@ class App(customtkinter.CTk):
             message = "File was downloaded successfully !\nTake a look :)"
 
             self.__message(title, message, "ok")
-            # TODO close the export_popup
 
     # handler for pressing the 'Show Report' button
     def __show_report_btn_handler(self):
@@ -335,8 +375,10 @@ class App(customtkinter.CTk):
     def __change_mode(self):
         if self.Theme_switch.get() == 1:
             customtkinter.set_appearance_mode("dark")
+            self.Theme_switch.text = "Light Mode"
         else:
             customtkinter.set_appearance_mode("light")
+            self.Theme_switch.text = "Dark Mode"
 
     # handler for closing the main frame
     def __on_closing(self, event=0):
