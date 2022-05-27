@@ -14,7 +14,6 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 PATH = os.path.dirname(os.path.realpath(__file__))
 
 
-# TODO: think about all the cases where pop up windows need to be closed
 # TODO: think of all the cases where the data need to be reset for new data (e.g. new video)
 # TODO: save empty .txt and .pdf files
 # TODO: disable/unable labels/buttons
@@ -52,9 +51,9 @@ class App(customtkinter.CTk):
         # ============ frame_left ============
 
         # configure grid layout (1x11)
-        self.frame_left.grid_rowconfigure(0, minsize=10) # empty row with minsize as spacing
-        self.frame_left.grid_rowconfigure(8, minsize=10) # empty row with minsize as spacing
-        self.frame_left.grid_rowconfigure(1, minsize=20) # empty row with minsize as spacing
+        for i in range(0,9):
+            self.frame_left.grid_rowconfigure(i, minsize=10) # empty row with minsize as spacing
+
         self.frame_left.grid_rowconfigure(9, weight=10) # empty row as spacing
 
         # set the 'Video Loader' label and button
@@ -270,6 +269,8 @@ class App(customtkinter.CTk):
 
             self.__message(title, message, "ok")
         else:
+            self.export_popup.destroy()
+
             # load images
             image_size = 35
             self.folder_image = self.__load_image("show_in_folder.png", image_size, image_size)
