@@ -2,3 +2,4 @@ tkVideo
 customtkinter
 reportlab
 pylint
+mediapipe
