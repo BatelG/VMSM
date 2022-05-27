@@ -297,7 +297,7 @@ class App(customtkinter.CTk):
                                                             compound="left", command=self.__show_report_btn_handler)
 
                 sticky = "n" if len(selected_checkboxes) == 1 else "nw" # appers in the middle if this report is the only one
-                self.txt_file_image_btn.grid(row=5, column=0, pady=80, padx=30, sticky=sticky)
+                self.txt_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
 
                 file_cnt = file_cnt + 1
 
@@ -311,7 +311,7 @@ class App(customtkinter.CTk):
                                                             compound="left", command=self.__show_report_btn_handler)
 
                 sticky = "n" if len(selected_checkboxes) == 1 else "ne" # appers in the middle if this report is the only one
-                self.pdf_file_image_btn.grid(row=5, column=0, pady=80, padx=30, sticky=sticky)
+                self.pdf_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
 
                 file_cnt = file_cnt + 1
 
