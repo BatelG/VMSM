@@ -270,62 +270,66 @@ class App(customtkinter.CTk):
             self.__message(title, message, "ok")
         else:
             self.export_popup.destroy()
+            file_cnt = 0 # determines the message of the file saved popup
 
-            # load images
+            # load image
             image_size = 35
-            self.folder_image = self.__load_image("show_in_folder.png", image_size, image_size)
-            self.report_image = self.__load_image("open_report.jpg", image_size, image_size)
+            folder_image = self.__load_image("file_explore.png", image_size, image_size)
 
+            # set the 'Open Report' label and the 'Show in File Explorer' button.
+            self.open_report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Open Report",
+                                                text_font=("Calibri Bold", -20)) # font name and size in px
+            self.open_report_lbl.grid(row=5, column=0, pady=40, padx=10, sticky="n")
+
+            self.folder_btn = customtkinter.CTkButton(master=self.frame_left, image=folder_image,
+                                                        text="", width=30, height=30,
+                                                        compound="left", command=self.__show_in_explorer_btn_handler)
+            self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
+
+
+            # TODO: save an empty txt file
             if "on" == self.txt_choice.get():
-                row = 5 + selected_checkboxes.index(self.txt_choice)
+                report_image = self.__load_image("open_raw_data.jpg", image_size, image_size)
 
-                # set the 'Raw Data' label and the buttons 'Show Report', 'Show in File Explorer'
-                self.txt_report_lbl = customtkinter.CTkLabel(master=self.frame_left, text=self.txt_choice.text,
-                                                    text_font=("Calibri Bold", -20)) # font name and size in px
-                self.txt_report_lbl.grid(row=row, column=0, pady=40, padx=10, sticky="n")
-
-                self.txt_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.report_image,
+                # set the 'Raw Data' label and the 'Open Raw Data' button
+                self.txt_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
                                                             text="", width=30, height=30,
                                                             compound="left", command=self.__show_report_btn_handler)
-                self.txt_file_image_btn.grid(row=row, column=0, pady=80, padx=30, sticky="nw")
 
-                self.txt_folder_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.folder_image,
-                                                            text="", width=30, height=30,
-                                                            compound="left", command=self.__show_in_explorer_btn_handler)
-                self.txt_folder_image_btn.grid(row=row, column=0, pady=80, padx=30, sticky="ne")
+                sticky = "n" if len(selected_checkboxes) == 1 else "nw" # appers in the middle if this report is the only one
+                self.txt_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
 
+                file_cnt = file_cnt + 1
+
+            # TODO: save an empty pdf file
             if "on" == self.pdf_choice.get():
-                row = 5 + selected_checkboxes.index(self.pdf_choice)
+                report_image = self.__load_image("open_report.jpg", image_size, image_size)
 
-                # set the 'Raw Data' label and the buttons 'Show Report', 'Show in File Explorer'
-                self.pdf_report_lbl = customtkinter.CTkLabel(master=self.frame_left, text=f"     {self.pdf_choice.text}",
-                                                    text_font=("Calibri Bold", -20)) # font name and size in px
-                self.pdf_report_lbl.grid(row=row, column=0, pady=0, padx=10, sticky="n")
-
-                self.pdf_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.report_image,
+                # set the 'Raw Data' label and the 'Open Report' button
+                self.pdf_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
                                                             text="", width=30, height=30,
                                                             compound="left", command=self.__show_report_btn_handler)
-                self.pdf_file_image_btn.grid(row=row, column=0, pady=40, padx=30, sticky="nw")
 
-                self.pdf_folder_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.folder_image,
-                                                            text="", width=30, height=30,
-                                                            compound="left", command=self.__show_in_explorer_btn_handler)
-                self.pdf_folder_image_btn.grid(row=row, column=0, pady=40, padx=30, sticky="ne")
+                sticky = "n" if len(selected_checkboxes) == 1 else "ne" # appers in the middle if this report is the only one
+                self.pdf_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
+
+                file_cnt = file_cnt + 1
 
             # pop a success message
             title = "Export Success"
-            message = "File was downloaded successfully !\nTake a look :)"
+            sub_message = "The file was" if file_cnt == 1 else "The files were"
+            message = f"{sub_message} downloaded successfully !\nTake a look :)"
 
             self.__message(title, message, "ok")
 
     # handler for pressing the 'Show Report' button
     def __show_report_btn_handler(self):
-        #TODO: change
+        #TODO: open the file on the computer
         self.destroy()
 
     # handler for pressing 'Show in File Explorer' button
     def __show_in_explorer_btn_handler(self):
-        #TODO: change
+        #TODO: show the downloaded file in the file explorer
         self.destroy()
 
     # set the check box's initial state
