@@ -284,7 +284,7 @@ class App(customtkinter.CTk):
             self.folder_btn = customtkinter.CTkButton(master=self.frame_left, image=folder_image,
                                                         text="", width=30, height=30,
                                                         compound="left", command=self.__show_in_explorer_btn_handler)
-            self.folder_btn.grid(row=5, column=1, pady=80, padx=0, sticky="n")
+            self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
 
 
             # TODO: save an empty txt file
@@ -310,8 +310,8 @@ class App(customtkinter.CTk):
                                                             text="", width=30, height=30,
                                                             compound="left", command=self.__show_report_btn_handler)
 
-                pad_x = 30 if selected_checkboxes.index(self.pdf_choice) == 0 else 0 # appers in the middle if this report is the only one
-                self.pdf_file_image_btn.grid(row=5, column=0, pady=80, padx=pad_x, sticky="n")
+                sticky = "n" if len(selected_checkboxes) == 1 else "ne" # appers in the middle if this report is the only one
+                self.pdf_file_image_btn.grid(row=5, column=0, pady=80, padx=30, sticky=sticky)
 
                 file_cnt = file_cnt + 1
 
