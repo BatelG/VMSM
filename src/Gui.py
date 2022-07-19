@@ -1,15 +1,17 @@
-import os
-import time
+import pathlib
 from tkinter import *
 import customtkinter
-from PIL import Image, ImageTk
 from customtkinter import CTkCheckBox
 from resources.videoGenerator import *
-
+import cv2
+import numpy as np
+import cv2
+import imutils
+import numpy as np
+import argparse
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
-
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -17,6 +19,8 @@ PATH = os.path.dirname(os.path.realpath(__file__))
 # TODO: think of all the cases where the data need to be reset for new data (e.g. new video)
 # TODO: save empty .txt and .pdf files
 # TODO: disable/unable labels/buttons
+
+
 class App(customtkinter.CTk):
     WIDTH = 850
     HEIGHT = 600
@@ -38,7 +42,7 @@ class App(customtkinter.CTk):
         self.frame_left = customtkinter.CTkFrame(master=self, width=180, corner_radius=0)
         self.frame_left.grid(row=0, column=0, sticky="nswe")
 
-        #set the right frame
+        # set the right frame
         self.frame_right = customtkinter.CTkFrame(master=self)
         self.frame_right.grid(row=0, column=3, sticky="nswe", padx=20, pady=20)
 
@@ -51,10 +55,10 @@ class App(customtkinter.CTk):
         # ============ frame_left ============
 
         # configure grid layout (1x11)
-        for i in range(0,9):
-            self.frame_left.grid_rowconfigure(i, minsize=10) # empty row with minsize as spacing
+        for i in range(0, 9):
+            self.frame_left.grid_rowconfigure(i, minsize=10)  # empty row with minsize as spacing
 
-        self.frame_left.grid_rowconfigure(9, weight=10) # empty row as spacing
+        self.frame_left.grid_rowconfigure(9, weight=10)  # empty row as spacing
 
         # set the 'Video Loader' label and button
         self.video_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Video Loader",
@@ -62,8 +66,8 @@ class App(customtkinter.CTk):
         self.video_lbl.grid(row=1, column=0, pady=10, padx=10, sticky="n")
 
         self.video_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.video_explore_image,
-                                                        text="", width=30, height=30,
-                                                        compound="right", command=self.__video_btn_handler)
+                                                         text="", width=30, height=30,
+                                                         compound="right", command=self.__video_btn_handler)
         self.video_explore_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
 
         # set the theme switcher
@@ -93,25 +97,25 @@ class App(customtkinter.CTk):
 
         # set the 'Select ROIs' lables and checkboxes
         self.roi_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Select ROIs:",
-                                                text_font=("Calibri Bold", -20))
+                                              text_font=("Calibri Bold", -20))
         self.roi_lbl.grid(row=0, column=2, columnspan=1, pady=20, padx=10, sticky="n")
 
         # 'Right hand' choice
-        self.checkbox_var_RHand = IntVar(value=0) # init checkbox
+        self.checkbox_var_RHand = IntVar(value=0)  # init checkbox
         self.right_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
-                                                command=self.__toggle_state(self.checkbox_var_RHand),
-                                                variable=self.checkbox_var_RHand, onvalue="on", offvalue="off")
+                                                 command=self.__toggle_state(self.checkbox_var_RHand),
+                                                 variable=self.checkbox_var_RHand, onvalue="on", offvalue="off")
         self.right_hand_roi_choice.grid(row=1, column=2, pady=10, padx=20, sticky="n")
 
         # 'Left hand' choice
-        self.checkbox_var_LHand = IntVar(value=0) # init checkbox
+        self.checkbox_var_LHand = IntVar(value=0)  # init checkbox
         self.left_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Left Hand  ",
                                                 command=self.__toggle_state(self.checkbox_var_LHand),
                                                 variable=self.checkbox_var_LHand, onvalue="on", offvalue="off")
         self.left_hand_roi_choice.grid(row=2, column=2, pady=10, padx=20, sticky="n")
 
         # 'Pose' choice
-        self.checkbox_var_pose = IntVar(value=0) # init checkbox
+        self.checkbox_var_pose = IntVar(value=0)  # init checkbox
         self.pose_roi_choice = CTkCheckBox(master=self.frame_right, text="Pose          ",
                                            command=self.__toggle_state(self.checkbox_var_pose),
                                            variable=self.checkbox_var_pose, onvalue="on", offvalue="off")
@@ -119,18 +123,19 @@ class App(customtkinter.CTk):
 
         # set the 'Percentage Deviation' label and values slider
         self.perc_dev_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Percentage Deviation:",
-                                                    text_font=("Calibri Bold", -20))
+                                                   text_font=("Calibri Bold", -20))
         self.perc_dev_lbl.grid(row=4, column=0, columnspan=2, pady=10, sticky="ns")
 
-        self.slider = customtkinter.CTkSlider(master=self.frame_right, command=self.__prec_slider_handler, from_=0, to=1)
+        self.slider = customtkinter.CTkSlider(master=self.frame_right, command=self.__prec_slider_handler, from_=0,
+                                              to=1)
         self.slider.grid(row=5, column=0, columnspan=1, pady=10, padx=125, sticky="ns")
         self.slider.set(0.0)
 
         # set the 'Start Analysis' button
         self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=105,
-                                                fg_color='gray', hover_color='green', text="Start Analysis",
-                                                corner_radius=15, text_font=("Calibri Bold", -18),
-                                                command=self.__start_btn_handler)
+                                                 fg_color='gray', hover_color='green', text="Start Analysis",
+                                                 corner_radius=15, text_font=("Calibri Bold", -18),
+                                                 command=self.__start_btn_handler)
         self.start_btn.grid(row=6, column=0, columnspan=3, pady=10, padx=135, sticky="w")
 
     # set the shown float values in format .2f for the 'Percentage Deviation' slider
@@ -145,8 +150,127 @@ class App(customtkinter.CTk):
         # VideoGenerator(video_frame)
 
         self.video = Video(video_frame)
+        self.__devide_into_frames(self.video.path)
 
-    # handler for pressing 'Start Analysis' button
+    def __devide_into_frames(self, path):
+
+        vidcap = cv2.VideoCapture(path)
+        self.last_try(path)
+        success, image = vidcap.read()
+
+        count = 0
+        lst_of_frames = []
+        rep_path = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+        if not os.path.exists(f"{rep_path}\\frames"):
+            os.mkdir(f"{rep_path}\\frames")
+        if not os.path.exists(f"{rep_path}\\detected_frames"):
+            os.mkdir(f"{rep_path}\\detected_frames")
+        while success:
+            image_path = f"{rep_path}\\frames\\frame{count}.jpg"
+            detected_image_path = f"{rep_path}\\detected_frames\\frame{count}.jpg"
+            cv2.imwrite(image_path, image)  # save frame as JPEG file
+            success, image = vidcap.read()
+            if success:
+                lst_of_frames.append(image)
+            print('Read a new frame: ', success)
+            count += 1
+
+
+    def detectByPathImage(self, path, output_path):
+        image = cv2.imread(path)
+        image = imutils.resize(image, width=min(800, image.shape[1]))
+        result_image = self.detect(image)
+        if output_path is not None:
+            cv2.imwrite(output_path, result_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    def detect(self, frame):
+        HOGCV = cv2.HOGDescriptor()
+        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        bounding_box_cordinates, weights = HOGCV.detectMultiScale(gray, winStride=(4, 4), padding=(8, 8), scale=1.03)
+
+        person = 1
+        for x, y, w, h in bounding_box_cordinates:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(frame, f'person {person}', (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+            person += 1
+
+        cv2.putText(frame, 'Status : Detecting ', (40, 40), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 0, 0), 2)
+        cv2.putText(frame, f'Total Persons : {person - 1}', (40, 70), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 0, 0), 2)
+        cv2.imshow('output', frame)
+        return frame
+
+    def last_try(self, path):
+        import cv2
+        import mediapipe as mp
+        mp_drawing = mp.solutions.drawing_utils
+        mp_objectron = mp.solutions.objectron
+
+        # # For static images:
+        # IMAGE_FILES = []
+        # IMAGE_FILES = arr
+        # with mp_objectron.Objectron(static_image_mode=True,
+        #                             max_num_objects=5,
+        #                             min_detection_confidence=0.5,
+        #                             model_name='Shoe') as objectron:
+        #     for idx, file in enumerate(IMAGE_FILES):
+        #         image = cv2.imread(file)
+        #         # Convert the BGR image to RGB and process it with MediaPipe Objectron.
+        #         results = objectron.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        #
+        #         # Draw box landmarks.
+        #         if not results.detected_objects:
+        #             print(f'No box landmarks detected on {file}')
+        #             continue
+        #         print(f'Box landmarks of {file}:')
+        #         annotated_image = image.copy()
+        #         for detected_object in results.detected_objects:
+        #             mp_drawing.draw_landmarks(
+        #                 annotated_image, detected_object.landmarks_2d, mp_objectron.BOX_CONNECTIONS)
+        #             mp_drawing.draw_axis(annotated_image, detected_object.rotation,
+        #                                  detected_object.translation)
+        #             cv2.imwrite('/tmp/annotated_image' + str(idx) + '.png', annotated_image)
+
+        # For webcam input:
+        cap = cv2.VideoCapture(path)
+        with mp_objectron.Objectron(static_image_mode=False,
+                                    max_num_objects=5,
+                                    min_detection_confidence=0.5,
+                                    min_tracking_confidence=0.99,
+                                    model_name='Shoe') as objectron:
+            while cap.isOpened():
+                success, image = cap.read()
+                if not success:
+                    print("Ignoring empty camera frame.")
+                    # If loading a video, use 'break' instead of 'continue'.
+                    continue
+                    break
+
+                # To improve performance, optionally mark the image as not writeable to
+                # pass by reference.
+                image.flags.writeable = False
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                results = objectron.process(image)
+
+                # Draw the box landmarks on the image.
+                image.flags.writeable = True
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                if results.detected_objects:
+                    for detected_object in results.detected_objects:
+                        mp_drawing.draw_landmarks(
+                            image, detected_object.landmarks_2d, mp_objectron.BOX_CONNECTIONS)
+                        mp_drawing.draw_axis(image, detected_object.rotation,
+                                             detected_object.translation)
+                # Flip the image horizontally for a selfie-view display.
+                cv2.imshow('MediaPipe Objectron', cv2.flip(image, 1))
+                if cv2.waitKey(5) & 0xFF == 27:
+                    break
+        cap.release()
+
+    def __Humen_detection(self, video_path):
+        pass
+
     def __start_btn_handler(self):
         time.sleep(1)
 
@@ -177,12 +301,12 @@ class App(customtkinter.CTk):
         else:
             # add option to export the analysis result reports (set label and button)
             self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
-                                                text_font=("Calibri Bold", -20)) # font name and size in px
+                                                     text_font=("Calibri Bold", -20))  # font name and size in px
             self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
 
             self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
-                                                        text="", width=30, height=30,
-                                                        compound="right", command=self.__report_btn_handler)
+                                                          text="", width=30, height=30,
+                                                          compound="right", command=self.__report_btn_handler)
             self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
 
             # show to the user the synchronization rate
@@ -225,27 +349,27 @@ class App(customtkinter.CTk):
         self.export_popup = self.__new_popup("Export Results", 300, 200)
 
         # export txt raw data choice
-        checkbox_var_txt = IntVar(value=0) # init checkbox
+        checkbox_var_txt = IntVar(value=0)  # init checkbox
         self.txt_choice = CTkCheckBox(master=self.export_popup, text="Raw Data", text_color='black',
-                                command=self.__toggle_state(checkbox_var_txt),
-                                variable=checkbox_var_txt, onvalue="on", offvalue="off")
+                                      command=self.__toggle_state(checkbox_var_txt),
+                                      variable=checkbox_var_txt, onvalue="on", offvalue="off")
         self.txt_choice.grid(row=1, column=0, pady=10, padx=60)
 
         # export pdf report choice
-        checkbox_var_pdf = IntVar(value=0) # init checkbox
+        checkbox_var_pdf = IntVar(value=0)  # init checkbox
         self.pdf_choice = CTkCheckBox(master=self.export_popup, text="Report      ", text_color='black',
-                                command=self.__toggle_state(checkbox_var_pdf),
-                                variable=checkbox_var_pdf, onvalue="on", offvalue="off")
+                                      command=self.__toggle_state(checkbox_var_pdf),
+                                      variable=checkbox_var_pdf, onvalue="on", offvalue="off")
         self.pdf_choice.grid(row=2, column=0, pady=10, padx=60)
 
         # set export label and button
         select_type_lbl = customtkinter.CTkLabel(master=self.export_popup, text="Select File to Export:",
-                                                text_color='black', text_font=("Calibri Bold", -20))
+                                                 text_color='black', text_font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=0, pady=10, padx=60)
 
         export_btn = customtkinter.CTkButton(master=self.export_popup, text="Export", width=70, height=40,
-                                            fg_color='gray', hover_color='green',
-                                            compound="right", command=self.__export_handler)
+                                             fg_color='gray', hover_color='green',
+                                             compound="right", command=self.__export_handler)
         export_btn.grid(row=3, column=0, pady=10, padx=60)
 
         # pop the export window
@@ -270,7 +394,7 @@ class App(customtkinter.CTk):
             self.__message(title, message, "ok")
         else:
             self.export_popup.destroy()
-            file_cnt = 0 # determines the message of the file saved popup
+            file_cnt = 0  # determines the message of the file saved popup
 
             # load image
             image_size = 35
@@ -278,14 +402,13 @@ class App(customtkinter.CTk):
 
             # set the 'Open Report' label and the 'Show in File Explorer' button.
             self.open_report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Open Report",
-                                                text_font=("Calibri Bold", -20)) # font name and size in px
+                                                          text_font=("Calibri Bold", -20))  # font name and size in px
             self.open_report_lbl.grid(row=5, column=0, pady=40, padx=10, sticky="n")
 
             self.folder_btn = customtkinter.CTkButton(master=self.frame_left, image=folder_image,
-                                                        text="", width=30, height=30,
-                                                        compound="left", command=self.__show_in_explorer_btn_handler)
+                                                      text="", width=30, height=30,
+                                                      compound="left", command=self.__show_in_explorer_btn_handler)
             self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
-
 
             # TODO: save an empty txt file
             if "on" == self.txt_choice.get():
@@ -293,10 +416,12 @@ class App(customtkinter.CTk):
 
                 # set the 'Raw Data' label and the 'Open Raw Data' button
                 self.txt_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
-                                                            text="", width=30, height=30,
-                                                            compound="left", command=self.__show_report_btn_handler)
+                                                                  text="", width=30, height=30,
+                                                                  compound="left",
+                                                                  command=self.__show_report_btn_handler)
 
-                sticky = "n" if len(selected_checkboxes) == 1 else "nw" # appers in the middle if this report is the only one
+                sticky = "n" if len(
+                    selected_checkboxes) == 1 else "nw"  # appers in the middle if this report is the only one
                 self.txt_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
 
                 file_cnt = file_cnt + 1
@@ -307,10 +432,12 @@ class App(customtkinter.CTk):
 
                 # set the 'Raw Data' label and the 'Open Report' button
                 self.pdf_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
-                                                            text="", width=30, height=30,
-                                                            compound="left", command=self.__show_report_btn_handler)
+                                                                  text="", width=30, height=30,
+                                                                  compound="left",
+                                                                  command=self.__show_report_btn_handler)
 
-                sticky = "n" if len(selected_checkboxes) == 1 else "ne" # appers in the middle if this report is the only one
+                sticky = "n" if len(
+                    selected_checkboxes) == 1 else "ne"  # appers in the middle if this report is the only one
                 self.pdf_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
 
                 file_cnt = file_cnt + 1
@@ -324,12 +451,12 @@ class App(customtkinter.CTk):
 
     # handler for pressing the 'Show Report' button
     def __show_report_btn_handler(self):
-        #TODO: open the file on the computer
+        # TODO: open the file on the computer
         self.destroy()
 
     # handler for pressing 'Show in File Explorer' button
     def __show_in_explorer_btn_handler(self):
-        #TODO: show the downloaded file in the file explorer
+        # TODO: show the downloaded file in the file explorer
         self.destroy()
 
     # set the check box's initial state
@@ -339,7 +466,8 @@ class App(customtkinter.CTk):
     # load image as PhotoImage
     def __load_image(self, name, width, height):
         image = ImageTk.PhotoImage(Image.open
-                (PATH + f"\\resources\\images\\{name}").resize((width, height), Image.Resampling.LANCZOS))
+                                   (PATH + f"\\resources\\images\\{name}").resize((width, height),
+                                                                                  Image.Resampling.LANCZOS))
 
         # PhotoImage object is garbage-collected by Python,
         # so the image is cleared even if it’s being displayed by a Tkinter widget.
@@ -365,12 +493,12 @@ class App(customtkinter.CTk):
 
         # set the label and button
         select_type_lbl = customtkinter.CTkLabel(master=msg_popup, text=message,
-                                            text_color='black', text_font=("Calibri Bold", -20))
+                                                 text_color='black', text_font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
 
         btn = customtkinter.CTkButton(master=msg_popup, text=button, width=70, height=40,
-                                        fg_color='gray', hover_color='green', compound="right",
-                                        command=msg_popup.destroy)
+                                      fg_color='gray', hover_color='green', compound="right",
+                                      command=msg_popup.destroy)
         btn.grid(row=1, column=3, padx=190, sticky='ns')
 
         # pop the message
