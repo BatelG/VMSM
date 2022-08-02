@@ -1,14 +1,12 @@
+import argparse
 import pathlib
+import time
 from tkinter import *
 import customtkinter
 from customtkinter import CTkCheckBox
 from resources.videoGenerator import *
 import cv2
-import numpy as np
-import cv2
 import imutils
-import numpy as np
-import argparse
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -150,12 +148,29 @@ class App(customtkinter.CTk):
         # VideoGenerator(video_frame)
 
         self.video = Video(video_frame)
-        self.__devide_into_frames(self.video.path)
+        # self.__devide_into_frames(self.video.path)
 
-    def __devide_into_frames(self, path):
+    def frame_to_video(self):
+        import cv2
+        import glob
+
+        rep_path = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+        img_array = []
+        for filename in glob.glob(rf'{rep_path}\\frames/*.jpg'):
+            img = cv2.imread(filename)
+            height, width, layers = img.shape
+            size = (width, height)
+            img_array.append(img)
+
+        out = cv2.VideoWriter('rep_path\project.mp4', cv2.VideoWriter_fourcc(*'DIVX'), 15, size)
+
+        for i in range(len(img_array)):
+            out.write(img_array[i])
+        out.release()
+
+    def devide_into_frames(self, path):
 
         vidcap = cv2.VideoCapture(path)
-        self.last_try(path)
         success, image = vidcap.read()
 
         count = 0
@@ -174,7 +189,6 @@ class App(customtkinter.CTk):
                 lst_of_frames.append(image)
             print('Read a new frame: ', success)
             count += 1
-
 
     def detectByPathImage(self, path, output_path):
         image = cv2.imread(path)
@@ -521,7 +535,233 @@ class App(customtkinter.CTk):
     def start(self):
         self.mainloop()
 
+    def rescaleFrame(self, frame, scale=0.5):  # rescaling to 50% by default
+        # works for images, video and live video
+        width = int(frame.shape[1] * scale)  # must be an integer
+        height = int(frame.shape[0] * scale)  # must be an integer
+
+        print(f"width: {width}")
+        print(f"height: {height}")
+        dimensions = (width, height)
+
+        return cv2.resize(frame, dimensions, interpolation=cv2.INTER_AREA)
+
+    def our_media_pipe(self):
+
+        import mediapipe as mp
+        # from cv2 import cv2
+
+        mp_drawing = mp.solutions.drawing_utils  # set up MediaPipe
+        mp_holistic = mp.solutions.holistic  # set up holistic module
+
+        # large photos and videos are need to be rescaling and resizing
+
+        # Apply Styling
+        mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)
+
+        # Live webcam
+        # cap = cv2.VideoCapture(0)
+
+        # Existing video
+        cap = cv2.VideoCapture(r"C:\final_project\VMSM\src\resources\videos\istockphoto-1382942438-640_adpp_is.mp4")
+        # mother and son: istockphoto-1382942438-640_adpp_is.mp4
+        # static background: pexels-koolshooters-9943737.mp4
+        # non-static background: Pexels Videos 992715.mp4
+        # distvantage - not detecting well artificial organs: production ID_4110019.mp4
+        # two people - detect only the right one: pexels-yaroslav-shuraev-8472270.mp4
+
+        # Initiate holistic model
+        with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+            cnt = 0
+            while cap.isOpened():
+                ret, frame = cap.read()
+
+                # resize big video
+                frame_resized = self.rescaleFrame(frame, scale=1)
+
+                # Recolor Feed
+                image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)  # resized frame
+                # image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) ## change to that when live webcam
+
+                # Make Detections
+                results = holistic.process(image)
+                # if cnt == 1:
+                print(results.pose_world_landmarks)  # coordinates
+                import sys
+                maxSize = sys.maxsize
+                minSize = -sys.maxsize - 1
+                minX = maxSize
+                maxX = minSize
+                minY = maxSize
+                maxY = minSize
+                for temp in results.pose_world_landmarks.landmark:
+                    if temp.x < minX:
+                        minX = temp.x
+                    if maxX < temp.x:
+                        maxX = temp.x
+                    if temp.y < minY:
+                        minY = temp.y
+                    if maxY < temp.y:
+                        maxY = temp.y
+
+                print('minX = ', minX)
+                print('maxX = ', maxX)
+                print('minY = ', minY)
+                print('maxY = ', maxY)
+
+                self.crop_video(minX, minY, maxY, maxX)
+
+                exit(0)
+
+                # pose_world_landmarks,face_landmarks, pose_landmarks, left_hand_landmarks, right_hand_landmarks
+
+                # Recolor image back to BGR for rendering
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+                # 1. Draw face landmarks
+                # mp_drawing.draw_landmarks(image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
+                #     mp_drawing.DrawingSpec(color=(80,110,10), thickness=1, circle_radius=1),
+                #     mp_drawing.DrawingSpec(color=(80,256,121), thickness=1, circle_radius=1)
+                #     )
+                # we can disable it, because Pose Detections (#4) have basic face landmarks
+
+                # 2. Right hand
+                # mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
+                #     mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
+                #     mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2)
+                # )
+
+                # 3. Left Hand
+                # mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
+                #     mp_drawing.DrawingSpec(color=(121,22,76), thickness=2, circle_radius=4),
+                #     mp_drawing.DrawingSpec(color=(121,44,250), thickness=2, circle_radius=2)
+                # )
+
+                # 4. Pose Detections
+                mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
+                                          mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
+                                          mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
+                                          )
+
+                # Show the video/webcam feed
+                cv2.imshow('Detected Video', image)
+
+                if cv2.waitKey(10) & 0xFF == ord('q'):
+                    break
+
+                cnt += 1
+
+        cap.release()
+        cv2.destroyAllWindows()
+
+    def crop_video(self, x, y, h, w):
+        import cv2
+
+        # Open the video
+        cap = cv2.VideoCapture(r"C:\final_project\VMSM\src\resources\videos\istockphoto-1382942438-640_adpp_is.mp4")
+
+        # Initialize frame counter
+        cnt = 0
+
+        # Some characteristics from the original video
+        w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+        # Here you can define your croping values
+       # x, y, h, w = 0, 0, 100, 100
+        medX = w_frame//2
+        medY = h_frame//2
+        # if abs(x)<abs(w):
+        #
+        # if abs(y)<abs(h):
+
+        new_x = (((abs(x+w))//2) - x) * w_frame
+        new_w = (abs((x + w)) - (abs((x + w)) // 2)) * w_frame
+        new_y = ((abs((y + h)) // 2) - y) * h_frame
+        new_h = (abs((y + h)) - (abs((y + h)) // 2)) * h_frame
+
+
+        x = int(new_x)
+        y = int(new_y)
+        h = int(new_h)
+        w = int(new_w)
+
+        print( new_x, new_y, new_h, new_w)
+        # output
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(r'C:\final_project\VMSM\src\resources\videos\result.avi', fourcc, fps, (1000, 1000))
+
+
+#####################################
+
+        # import cv2
+        #
+        # top, right, bottom, left = 10, 450 + 10, 360 + 10, 10  # Sample values.
+        #
+        # input_video = cv2.VideoCapture('Sample_Vid.mp4')
+        #
+        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        # output_movie = cv2.VideoWriter('videoPrueba.avi', fourcc, 30, (450, 360))
+        #
+        # while True:
+        #     ret, frame = input_video.read()
+        #
+        #     if not ret:
+        #         break
+        #
+        #     # Following crop assumes the video is colored,
+        #     # in case it's Grayscale, you may use: crop_img = frame[top:bottom, left:right]
+        #     crop_img = frame[top:bottom, left:right, :]
+        #
+        #     output_movie.write(crop_img)
+        #
+        # # Closes the video writer.
+        # output_movie.release()
+
+
+######################################
+        # Now we start
+        while (cap.isOpened()):
+            ret, frame = cap.read()
+
+            cnt += 1  # Counting frames
+
+            # Avoid problems when video finish
+            if ret == True:
+                # Croping the frame
+                crop_frame = frame[y:y + h, x:x + w]
+                print(f'making a cut y:y + h, x:x + w : {y} - {y+h}, {x}-{x + w}')
+
+                # Percentage
+                xx = cnt * 100 / frames
+                print(int(xx), '%')
+
+                # Saving from the desired frames
+                # if 15 <= cnt <= 90:
+                #    out.write(crop_frame)
+
+                # I see the answer now. Here you save all the video
+                out.write(crop_frame)
+
+                # Just to see the video in real time
+                cv2.imshow('frame', frame)
+                cv2.imshow('croped', crop_frame)
+
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+            else:
+                break
+            time.sleep(0.2)
+
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
+    # app = App()
+
     app = App()
-    app.start()
+    app.our_media_pipe()
+    # app.devide_into_frames(r"C:\final_project\VMSM\src\resources\videos\WhatsApp Video 2022-07-19 at 20.39.15.mp4")
+   # app.frame_to_video()
