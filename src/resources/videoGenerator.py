@@ -98,12 +98,11 @@ class Video():
     def __init__(self, frame):
         root = frame
         my_label = tk.Label(root)
-
         my_label.pack()
 
-        path = self.video_loader_btn_handler()
-        if path is not False:
-            player = tkvideo(path, my_label, loop=1, size=(350, 250))
+        self.path = self.video_loader_btn_handler()
+        if self.path is not False:
+            player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             player.play()
 
     def video_loader_btn_handler(self):
