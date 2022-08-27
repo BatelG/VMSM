@@ -7,6 +7,8 @@ from customtkinter import CTkCheckBox
 from resources.videoGenerator import *
 import cv2
 import imutils
+import sys
+import mediapipe as mp
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -537,141 +539,84 @@ class App(customtkinter.CTk):
 
     def rescaleFrame(self, frame, scale=0.5):  # rescaling to 50% by default
         # works for images, video and live video
+
+        if frame is None:
+            return
+
         width = int(frame.shape[1] * scale)  # must be an integer
         height = int(frame.shape[0] * scale)  # must be an integer
 
-        print(f"width: {width}")
-        print(f"height: {height}")
+        # print(f"width: {width}")
+        # print(f"height: {height}")
         dimensions = (width, height)
 
         return cv2.resize(frame, dimensions, interpolation=cv2.INTER_AREA)
 
-    def our_media_pipe(self):
+    def our_media_pipe(self, video_path, output):
 
-        import mediapipe as mp
-        # from cv2 import cv2
+        # set up MediaPipe
+        mp_drawing = mp.solutions.drawing_utils
 
-        mp_drawing = mp.solutions.drawing_utils  # set up MediaPipe
-        mp_holistic = mp.solutions.holistic  # set up holistic module
+        # set up holistic module
+        mp_holistic = mp.solutions.holistic
 
-        # large photos and videos are need to be rescaling and resizing
+        # ** large photos and videos are need to be rescaling and resizing ** #
 
         # Apply Styling
         mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)
 
-        # Live webcam
-        # cap = cv2.VideoCapture(0)
+        # Import video from file
+        cap = cv2.VideoCapture(video_path)
 
-        # Existing video
-        cap = cv2.VideoCapture(r"C:\final_project\VMSM\src\resources\videos\pexels-kampus-production-8912749.mp4")
-        # mother and son: istockphoto-1382942438-640_adpp_is.mp4
-        # static background: pexels-koolshooters-9943737.mp4
-        # non-static background: Pexels Videos 992715.mp4
-        # distvantage - not detecting well artificial organs: production ID_4110019.mp4
-        # two people - detect only the right one: pexels-yaroslav-shuraev-8472270.mp4
-
-        # Initiate holistic model
-
-        import sys
+        # Initialize min/max default values
         maxSize = sys.maxsize
         minSize = -sys.maxsize - 1
-
         minX = maxSize
         maxX = minSize
         minY = maxSize
         maxY = minSize
 
+        # Initiate holistic model
         with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+            # Counter for indicate the frame number
             cnt = 0
             while cap.isOpened():
                 ret, frame = cap.read()
-
-                # resize big video
-                if frame is not None:
-                    frame_resized = self.rescaleFrame(frame, scale=1)
-                else:
+                if frame is None:
                     break
 
+                # resize big video
+                frame_resized = self.rescaleFrame(frame, scale=1)
+
                 # Recolor Feed
-                image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)  # resized frame
-                # image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) ## change to that when live webcam
+                image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
 
                 # Make Detections
                 results = holistic.process(image)
-                # if cnt == 1:
-                print(results.pose_world_landmarks)  # coordinates
 
-                # print(maxSize)
-                # print(minSize)
-                # print(maxSize)
-                # print(minSize)
+                # Print coordinates
+                print(results.pose_landmarks.landmark)
 
-                for land_mark in results.pose_world_landmarks.landmark:
-                    if minX > land_mark.x:
+                # Loop on landmarks set for finding min,max of (x,y)
+                for land_mark in results.pose_landmarks.landmark:
+                    # for land_mark in results.pose_world_landmarks.landmark:
+                    if minX > land_mark.x > 0:
                         minX = land_mark.x
-                    if maxX < land_mark.x:
+                    if maxX < land_mark.x < 1:
                         maxX = land_mark.x
-                    if minY > land_mark.y:
+                    if minY > land_mark.y > 0:
                         minY = land_mark.y
-                    if maxY < land_mark.y:
+                    if maxY < land_mark.y < 1:
                         maxY = land_mark.y
 
-                print('minX = ', minX)
-                print('maxX = ', maxX)
-
-                print('minY = ', minY)
-                print('maxY = ', maxY)
-
-                print("############################################")
-
-                minX = abs(minX)
-                maxX = abs(maxX - minX)
-                minY = abs(minY)
-                maxY = abs(maxY - minY)
-
-                print('minX = ', minX)
-                print('deltaX = ', maxX)
-
-                print('minY = ', minY)
-                print('deltaY = ', maxY)
-
-                # # padding section
-                # maxX = abs(maxX - minX)
-                # maxY = abs(maxY - minY)
-
-                #  self.crop_video(minX, minY, maxY, maxX)
-
-                # pose_world_landmarks,face_landmarks, pose_landmarks, left_hand_landmarks, right_hand_landmarks
-
-                # Recolor image back to BGR for rendering
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-                # 1. Draw face landmarks
-                # mp_drawing.draw_landmarks(image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
-                #     mp_drawing.DrawingSpec(color=(80,110,10), thickness=1, circle_radius=1),
-                #     mp_drawing.DrawingSpec(color=(80,256,121), thickness=1, circle_radius=1)
-                #     )
-                # we can disable it, because Pose Detections (#4) have basic face landmarks
-
-                # 2. Right hand
-                # mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
-                #     mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
-                #     mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2)
-                # )
-
-                # 3. Left Hand
-                # mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS,
-                #     mp_drawing.DrawingSpec(color=(121,22,76), thickness=2, circle_radius=4),
-                #     mp_drawing.DrawingSpec(color=(121,44,250), thickness=2, circle_radius=2)
-                # )
-
-                # 4. Pose Detections
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
                                           mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
                                           mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
                                           )
 
-                # Show the video/webcam feed
+                # Show the video feed
                 cv2.imshow('Detected Video', image)
 
                 if cv2.waitKey(10) & 0xFF == ord('q'):
@@ -679,15 +624,36 @@ class App(customtkinter.CTk):
 
                 cnt += 1
 
+        print("Result:")
+        print('minX = ', minX)
+        print('maxX = ', maxX)
+        print("##############")
+        print('minY = ', minY)
+        print('maxY = ', maxY)
+
+        print("############################################")
+
+        print("Delta calculations..")
+        deltaX = maxX - minX
+        deltaY = maxY - minY
+
+        print(f'(x_0,y_0) = ({minX},{minY})')
+        print('deltaX = ', deltaX)
+        print('deltaY = ', deltaY)
+        print(
+            f'(minX+deltaX,minY+deltaY) = ({minX}+{deltaX},{minY}+{deltaY}) = ({minX + deltaX},{minY + deltaY})')
+
         cap.release()
         cv2.destroyAllWindows()
-        self.crop_video(minX, minY, maxY, maxX)
 
-    def crop_video(self, x, y, deltaY, deltaX):
-        import cv2
+        print("crop video file...")
 
+        self.crop_video(video_path, output, minX, minY, deltaX, deltaY)
+        return minX, maxX
+
+    def crop_video(self, video_path, output, x_0_ratio, y_0_ratio, deltaX, deltaY):
         # Open the video
-        cap = cv2.VideoCapture(r"C:\final_project\VMSM\src\resources\videos\pexels-kampus-production-8912749.mp4")
+        cap = cv2.VideoCapture(video_path)
 
         # Initialize frame counter
         cnt = 0
@@ -696,90 +662,34 @@ class App(customtkinter.CTk):
         w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
-        # new_x = (((abs(x + w)) // 2) - x) * w_frame
-        # new_w = (abs((x + w)) - (abs((x + w)) // 2)) * w_frame
-        # new_y = ((abs((y + h)) // 2) - y) * h_frame
-        # new_h = (abs((y + h)) - (abs((y + h)) // 2)) * h_frame
+        # Calculate the original (x_0,y_0) coordinates of the frame
+        x_0 = int(x_0_ratio * w_frame)
+        y_0 = int(y_0_ratio * h_frame)
 
-        new_x = x * w_frame
-        # new_w = abs(deltaX * w_frame - new_x)
-        new_w = deltaX * w_frame
-        new_y = y * h_frame
+        # width and height if the cropped frame
+        w_frame_crop = int(deltaX * w_frame)
+        h_frame_crop = int(deltaY * h_frame)
 
-        # new_h = abs(deltaY * h_frame - new_y)
-        new_h = deltaY * h_frame
-        x = int(new_x)
-        y1 = int(new_y)
-        deltaY = int(new_h)
-        deltaX = int(new_w)
-        y2 = y1 - deltaY
+        # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+        out = cv2.VideoWriter(output, 0x7634706d, fps,
+                              (w_frame_crop, h_frame_crop))
 
-        # x *= 0.2
-        # y *= 0.2
-        # deltaX *= 0.2
-        # deltaY *= 0.2
-
-        print(f'new_x = {x}, new_y = {y2}, new_deltaY = {deltaY}, new_deltaX = {deltaX}')
-        print(f'{w_frame}X{h_frame}')
-        # output
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(r'C:\final_project\VMSM\src\resources\videos\result.avi', fourcc, fps, (640, 360))
-
-        #####################################
-
-        # import cv2
-        #
-        # top, right, bottom, left = 10, 450 + 10, 360 + 10, 10  # Sample values.
-        #
-        # input_video = cv2.VideoCapture('Sample_Vid.mp4')
-        #
-        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        # output_movie = cv2.VideoWriter('videoPrueba.avi', fourcc, 30, (450, 360))
-        #
-        # while True:
-        #     ret, frame = input_video.read()
-        #
-        #     if not ret:
-        #         break
-        #
-        #     # Following crop assumes the video is colored,
-        #     # in case it's Grayscale, you may use: crop_img = frame[top:bottom, left:right]
-        #     crop_img = frame[top:bottom, left:right, :]
-        #
-        #     output_movie.write(crop_img)
-        #
-        # # Closes the video writer.
-        # output_movie.release()
-
-        ######################################
-        # Now we start
-        while (cap.isOpened()):
+        while cap.isOpened():
             ret, frame = cap.read()
             frame = self.rescaleFrame(frame, scale=1)
 
             cnt += 1  # Counting frames
 
-            padX = 0.001
-            padY = 0.001
-            y2 = int(y2 * (1 - padY))
-            x = int(x * (1 - padX))
-            deltaY = int(deltaY * (1 + padY))
-            deltaX = int(deltaX * (1 + padX))
-
             # Avoid problems when video finish
             if ret == True:
                 # Croping the frame
-                crop_frame = frame[y2:y2 + 2 * deltaY, x:x + deltaX]
-                print(f'making a cut y:y + h: {y2} - {y2 + 2 * deltaY}')
-                print(f'making a cut x:x + w : {x}-{x + deltaX}')
+                crop_frame = frame[y_0:y_0 + h_frame_crop, x_0:x_0 + w_frame_crop]
+                print(
+                    f'making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
 
                 # Percentage
                 xx = cnt * 100 / frames
-                print(int(xx), '%')
-
-                # Saving from the desired frames
-                # if 15 <= cnt <= 90:
-                #    out.write(crop_frame)
+                print(int(xx), '%\n')
 
                 # I see the answer now. Here you save all the video
                 out.write(crop_frame)
@@ -792,8 +702,8 @@ class App(customtkinter.CTk):
                     break
             else:
                 break
-            time.sleep(200)
 
+        time.sleep(2)
         cap.release()
         out.release()
         cv2.destroyAllWindows()
@@ -803,6 +713,20 @@ if __name__ == "__main__":
     # app = App()
 
     app = App()
-    app.our_media_pipe()
-    # app.devide_into_frames(r"C:\final_project\VMSM\src\resources\videos\WhatsApp Video 2022-07-19 at 20.39.15.mp4")
-# app.frame_to_video()
+    video_path = r"C:\final_project\VMSM\src\resources\videos\istockphoto-1382942438-640_adpp_is.mp4"
+
+    # crop the first object from the video
+    minX, maxX = app.our_media_pipe(video_path, r'C:\final_project\VMSM\src\resources\videos\1st_result.mp4')
+
+    # find the other object
+    output = r'C:\final_project\VMSM\src\resources\videos\middle_result.mp4'
+
+    if maxX > 0.5:
+        app.crop_video(video_path, output, maxX, 0,
+                       1-maxX, 1)
+    if minX > 0.5:
+        app.crop_video(video_path, output, 0, 0,
+                       minX, 1)
+
+    # crop the second object from remain video
+    app.our_media_pipe(output, r'C:\final_project\VMSM\src\resources\videos\2nd_result.mp4')
