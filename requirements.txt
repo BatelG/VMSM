@@ -3,5 +3,4 @@ customtkinter
 reportlab
 pylint
 mediapipe
-imutils
 pyyaml
