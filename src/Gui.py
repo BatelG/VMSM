@@ -1,35 +1,31 @@
-import argparse
-import pathlib
-import time
 from tkinter import *
+import yaml
+from PIL import ImageTk, Image
 import customtkinter
 from customtkinter import CTkCheckBox
-from resources.videoGenerator import *
-import cv2
-import imutils
-import sys
-import mediapipe as mp
+from .utils import *
 
-customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-PATH = os.path.dirname(os.path.realpath(__file__))
+customtkinter.set_appearance_mode("System") # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_default_color_theme("blue") # Themes: "blue" (standard), "green", "dark-blue"
 
+with open(r'src\\configuration.yaml', 'r', encoding='utf-8') as c:
+    config = yaml.safe_load(c)
 
 # TODO: think of all the cases where the data need to be reset for new data (e.g. new video)
 # TODO: save empty .txt and .pdf files
 # TODO: disable/unable labels/buttons
 
-
 class App(customtkinter.CTk):
-    WIDTH = 850
-    HEIGHT = 600
+    # sizes of the application
+    width = config['GUI']['APP']['WIDTH']
+    height = config['GUI']['APP']['HEIGHT']
 
     def __init__(self):
         super().__init__()
 
         self.title("Video Motion Synchrony Measurement")
-        self.geometry(f"{App.WIDTH}x{App.HEIGHT}")
+        self.geometry(f"{App.width}x{App.height}")
         self.protocol("WM_DELETE_WINDOW", self.__on_closing)
 
         # ==========create_two_frames=========
@@ -145,147 +141,8 @@ class App(customtkinter.CTk):
     # upload video and set the frame for it
     def __video_btn_handler(self):
         video_frame = customtkinter.CTkFrame(self.frame_info)
-        # path = self.video_loader_btn_handler()
         video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
-        # VideoGenerator(video_frame)
-
         self.video = Video(video_frame)
-        # self.__devide_into_frames(self.video.path)
-
-    def frame_to_video(self):
-        import cv2
-        import glob
-
-        rep_path = os.path.dirname(pathlib.Path(__file__).parent.resolve())
-        img_array = []
-        for filename in glob.glob(rf'{rep_path}\\frames/*.jpg'):
-            img = cv2.imread(filename)
-            height, width, layers = img.shape
-            size = (width, height)
-            img_array.append(img)
-
-        out = cv2.VideoWriter('rep_path\project.mp4', cv2.VideoWriter_fourcc(*'DIVX'), 15, size)
-
-        for i in range(len(img_array)):
-            out.write(img_array[i])
-        out.release()
-
-    def devide_into_frames(self, path):
-
-        vidcap = cv2.VideoCapture(path)
-        success, image = vidcap.read()
-
-        count = 0
-        lst_of_frames = []
-        rep_path = os.path.dirname(pathlib.Path(__file__).parent.resolve())
-        if not os.path.exists(f"{rep_path}\\frames"):
-            os.mkdir(f"{rep_path}\\frames")
-        if not os.path.exists(f"{rep_path}\\detected_frames"):
-            os.mkdir(f"{rep_path}\\detected_frames")
-        while success:
-            image_path = f"{rep_path}\\frames\\frame{count}.jpg"
-            detected_image_path = f"{rep_path}\\detected_frames\\frame{count}.jpg"
-            cv2.imwrite(image_path, image)  # save frame as JPEG file
-            success, image = vidcap.read()
-            if success:
-                lst_of_frames.append(image)
-            print('Read a new frame: ', success)
-            count += 1
-
-    def detectByPathImage(self, path, output_path):
-        image = cv2.imread(path)
-        image = imutils.resize(image, width=min(800, image.shape[1]))
-        result_image = self.detect(image)
-        if output_path is not None:
-            cv2.imwrite(output_path, result_image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
-    def detect(self, frame):
-        HOGCV = cv2.HOGDescriptor()
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        bounding_box_cordinates, weights = HOGCV.detectMultiScale(gray, winStride=(4, 4), padding=(8, 8), scale=1.03)
-
-        person = 1
-        for x, y, w, h in bounding_box_cordinates:
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(frame, f'person {person}', (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-            person += 1
-
-        cv2.putText(frame, 'Status : Detecting ', (40, 40), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 0, 0), 2)
-        cv2.putText(frame, f'Total Persons : {person - 1}', (40, 70), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 0, 0), 2)
-        cv2.imshow('output', frame)
-        return frame
-
-    def last_try(self, path):
-        import cv2
-        import mediapipe as mp
-        mp_drawing = mp.solutions.drawing_utils
-        mp_objectron = mp.solutions.objectron
-
-        # # For static images:
-        # IMAGE_FILES = []
-        # IMAGE_FILES = arr
-        # with mp_objectron.Objectron(static_image_mode=True,
-        #                             max_num_objects=5,
-        #                             min_detection_confidence=0.5,
-        #                             model_name='Shoe') as objectron:
-        #     for idx, file in enumerate(IMAGE_FILES):
-        #         image = cv2.imread(file)
-        #         # Convert the BGR image to RGB and process it with MediaPipe Objectron.
-        #         results = objectron.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        #
-        #         # Draw box landmarks.
-        #         if not results.detected_objects:
-        #             print(f'No box landmarks detected on {file}')
-        #             continue
-        #         print(f'Box landmarks of {file}:')
-        #         annotated_image = image.copy()
-        #         for detected_object in results.detected_objects:
-        #             mp_drawing.draw_landmarks(
-        #                 annotated_image, detected_object.landmarks_2d, mp_objectron.BOX_CONNECTIONS)
-        #             mp_drawing.draw_axis(annotated_image, detected_object.rotation,
-        #                                  detected_object.translation)
-        #             cv2.imwrite('/tmp/annotated_image' + str(idx) + '.png', annotated_image)
-
-        # For webcam input:
-        cap = cv2.VideoCapture(path)
-        with mp_objectron.Objectron(static_image_mode=False,
-                                    max_num_objects=5,
-                                    min_detection_confidence=0.5,
-                                    min_tracking_confidence=0.99,
-                                    model_name='Shoe') as objectron:
-            while cap.isOpened():
-                success, image = cap.read()
-                if not success:
-                    print("Ignoring empty camera frame.")
-                    # If loading a video, use 'break' instead of 'continue'.
-                    continue
-                    break
-
-                # To improve performance, optionally mark the image as not writeable to
-                # pass by reference.
-                image.flags.writeable = False
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                results = objectron.process(image)
-
-                # Draw the box landmarks on the image.
-                image.flags.writeable = True
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                if results.detected_objects:
-                    for detected_object in results.detected_objects:
-                        mp_drawing.draw_landmarks(
-                            image, detected_object.landmarks_2d, mp_objectron.BOX_CONNECTIONS)
-                        mp_drawing.draw_axis(image, detected_object.rotation,
-                                             detected_object.translation)
-                # Flip the image horizontally for a selfie-view display.
-                cv2.imshow('MediaPipe Objectron', cv2.flip(image, 1))
-                if cv2.waitKey(5) & 0xFF == 27:
-                    break
-        cap.release()
-
-    def __Humen_detection(self, video_path):
-        pass
 
     def __start_btn_handler(self):
         time.sleep(1)
@@ -326,7 +183,7 @@ class App(customtkinter.CTk):
             self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
 
             # show to the user the synchronization rate
-            # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value !
+            # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
             # TODO: in the future, send the grade as is, without 'round' method (?)
             sync_rate, padx, color = self.__get_synchronization_rate(round(self.slider.get(), 2))
 
@@ -483,7 +340,7 @@ class App(customtkinter.CTk):
     def __load_image(self, name, width, height):
         image = ImageTk.PhotoImage(Image.open
                                    (PATH + f"\\resources\\images\\{name}").resize((width, height),
-                                                                                  Image.Resampling.LANCZOS))
+                                    Image.Resampling.LANCZOS))
 
         # PhotoImage object is garbage-collected by Python,
         # so the image is cleared even if it’s being displayed by a Tkinter widget.
@@ -536,197 +393,3 @@ class App(customtkinter.CTk):
     # run the main frame
     def start(self):
         self.mainloop()
-
-    def rescaleFrame(self, frame, scale=0.5):  # rescaling to 50% by default
-        # works for images, video and live video
-
-        if frame is None:
-            return
-
-        width = int(frame.shape[1] * scale)  # must be an integer
-        height = int(frame.shape[0] * scale)  # must be an integer
-
-        # print(f"width: {width}")
-        # print(f"height: {height}")
-        dimensions = (width, height)
-
-        return cv2.resize(frame, dimensions, interpolation=cv2.INTER_AREA)
-
-    def our_media_pipe(self, video_path, output):
-
-        # set up MediaPipe
-        mp_drawing = mp.solutions.drawing_utils
-
-        # set up holistic module
-        mp_holistic = mp.solutions.holistic
-
-        # ** large photos and videos are need to be rescaling and resizing ** #
-
-        # Apply Styling
-        mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)
-
-        # Import video from file
-        cap = cv2.VideoCapture(video_path)
-
-        # Initialize min/max default values
-        maxSize = sys.maxsize
-        minSize = -sys.maxsize - 1
-        minX = maxSize
-        maxX = minSize
-        minY = maxSize
-        maxY = minSize
-
-        # Initiate holistic model
-        with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-            # Counter for indicate the frame number
-            cnt = 0
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if frame is None:
-                    break
-
-                # resize big video
-                frame_resized = self.rescaleFrame(frame, scale=1)
-
-                # Recolor Feed
-                image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
-
-                # Make Detections
-                results = holistic.process(image)
-
-                # Print coordinates
-                print(results.pose_landmarks.landmark)
-
-                # Loop on landmarks set for finding min,max of (x,y)
-                for land_mark in results.pose_landmarks.landmark:
-                    # for land_mark in results.pose_world_landmarks.landmark:
-                    if minX > land_mark.x > 0:
-                        minX = land_mark.x
-                    if maxX < land_mark.x < 1:
-                        maxX = land_mark.x
-                    if minY > land_mark.y > 0:
-                        minY = land_mark.y
-                    if maxY < land_mark.y < 1:
-                        maxY = land_mark.y
-
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
-                mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                                          mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
-                                          mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
-                                          )
-
-                # Show the video feed
-                cv2.imshow('Detected Video', image)
-
-                if cv2.waitKey(10) & 0xFF == ord('q'):
-                    break
-
-                cnt += 1
-
-        print("Result:")
-        print('minX = ', minX)
-        print('maxX = ', maxX)
-        print("##############")
-        print('minY = ', minY)
-        print('maxY = ', maxY)
-
-        print("############################################")
-
-        print("Delta calculations..")
-        deltaX = maxX - minX
-        deltaY = maxY - minY
-
-        print(f'(x_0,y_0) = ({minX},{minY})')
-        print('deltaX = ', deltaX)
-        print('deltaY = ', deltaY)
-        print(
-            f'(minX+deltaX,minY+deltaY) = ({minX}+{deltaX},{minY}+{deltaY}) = ({minX + deltaX},{minY + deltaY})')
-
-        cap.release()
-        cv2.destroyAllWindows()
-
-        print("crop video file...")
-
-        self.crop_video(video_path, output, minX, minY, deltaX, deltaY)
-        return minX, maxX
-
-    def crop_video(self, video_path, output, x_0_ratio, y_0_ratio, deltaX, deltaY):
-        # Open the video
-        cap = cv2.VideoCapture(video_path)
-
-        # Initialize frame counter
-        cnt = 0
-
-        # Some characteristics from the original video
-        w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
-
-        # Calculate the original (x_0,y_0) coordinates of the frame
-        x_0 = int(x_0_ratio * w_frame)
-        y_0 = int(y_0_ratio * h_frame)
-
-        # width and height if the cropped frame
-        w_frame_crop = int(deltaX * w_frame)
-        h_frame_crop = int(deltaY * h_frame)
-
-        # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-        out = cv2.VideoWriter(output, 0x7634706d, fps,
-                              (w_frame_crop, h_frame_crop))
-
-        while cap.isOpened():
-            ret, frame = cap.read()
-            frame = self.rescaleFrame(frame, scale=1)
-
-            cnt += 1  # Counting frames
-
-            # Avoid problems when video finish
-            if ret == True:
-                # Croping the frame
-                crop_frame = frame[y_0:y_0 + h_frame_crop, x_0:x_0 + w_frame_crop]
-                print(
-                    f'making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
-
-                # Percentage
-                xx = cnt * 100 / frames
-                print(int(xx), '%\n')
-
-                # I see the answer now. Here you save all the video
-                out.write(crop_frame)
-
-                # Just to see the video in real time
-                cv2.imshow('frame', frame)
-                cv2.imshow('croped', crop_frame)
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            else:
-                break
-
-        time.sleep(2)
-        cap.release()
-        out.release()
-        cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    # app = App()
-
-    app = App()
-    video_path = r"C:\final_project\VMSM\src\resources\videos\istockphoto-1382942438-640_adpp_is.mp4"
-
-    # crop the first object from the video
-    minX, maxX = app.our_media_pipe(video_path, r'C:\final_project\VMSM\src\resources\videos\1st_result.mp4')
-
-    # find the other object
-    output = r'C:\final_project\VMSM\src\resources\videos\middle_result.mp4'
-
-    if maxX > 0.5:
-        app.crop_video(video_path, output, maxX, 0,
-                       1-maxX, 1)
-    if minX > 0.5:
-        app.crop_video(video_path, output, 0, 0,
-                       minX, 1)
-
-    # crop the second object from remain video
-    app.our_media_pipe(output, r'C:\final_project\VMSM\src\resources\videos\2nd_result.mp4')
