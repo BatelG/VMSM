@@ -34,8 +34,8 @@ class Video():
 
     def video_loader_btn_handler(self):
         filename_path = filedialog.askopenfilename(initialdir=PATH,
-                                                   title="Select a File",
-                                                   filetypes=(("Video files","*.mp4*")))
+                                                title="Select a File",
+                                                filetypes=(("Video files","*.mp4*")))
 
         if filename_path in ["", " "]:
             return False
@@ -56,7 +56,7 @@ class Video():
         return cv2.resize(frame, dimensions, interpolation=cv2.INTER_AREA)
 
     @staticmethod
-    def our_media_pipe(video_path, output):
+    def detect_object(video_path, output):
         mp_drawing = mp.solutions.drawing_utils # set up MediaPipe
         mp_holistic = mp.solutions.holistic # set up holistic module
 
@@ -104,9 +104,8 @@ class Video():
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                                          mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
-                                          mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
-                                          )
+                                        mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
+                                        mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
                 cv2.imshow('Detected Video', image) # show the video feed
 
@@ -160,8 +159,7 @@ class Video():
         h_frame_crop = int(deltaY * h_frame)
 
         # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-        out = cv2.VideoWriter(output, 0x7634706d, fps,
-                              (w_frame_crop, h_frame_crop))
+        out = cv2.VideoWriter(output, 0x7634706d, fps, (w_frame_crop, h_frame_crop))
 
         while cap.isOpened():
             ret, frame = cap.read()

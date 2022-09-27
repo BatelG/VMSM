@@ -4,8 +4,10 @@ from src.utils import Video
 def main():
     video_path = r'src\\resources\\videos\\istockphoto-1382942438-640_adpp_is.mp4'
 
+    # *** The following actions ar4e happening after user press "Start" button ***
+
     # crop the first object from the video
-    minX, maxX = Video.our_media_pipe(video_path, r'src\\resources\\videos\\results\\1st_result.mp4')
+    minX, maxX = Video.detect_object(video_path, r'src\\resources\\videos\\results\\1st_result.mp4')
 
     # find the other object
     output = r'src\\resources\\videos\\results\\middle_result.mp4'
@@ -16,7 +18,7 @@ def main():
         Video.crop_video(video_path, output, 0, 0, minX, 1)
 
     # crop the second object from remain video
-    Video.our_media_pipe(output, r'src\\resources\\videos\\results\\2nd_result.mp4')
+    Video.detect_object(output, r'src\\resources\\videos\\results\\2nd_result.mp4')
 
 if __name__ == "__main__":
     sys.exit(main())

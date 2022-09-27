@@ -62,8 +62,8 @@ class App(customtkinter.CTk):
         self.video_lbl.grid(row=1, column=0, pady=10, padx=10, sticky="n")
 
         self.video_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.video_explore_image,
-                                                         text="", width=30, height=30,
-                                                         compound="right", command=self.__video_btn_handler)
+                                                        text="", width=30, height=30,
+                                                        compound="right", command=self.__video_btn_handler)
         self.video_explore_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
 
         # set the theme switcher
@@ -93,14 +93,14 @@ class App(customtkinter.CTk):
 
         # set the 'Select ROIs' lables and checkboxes
         self.roi_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Select ROIs:",
-                                              text_font=("Calibri Bold", -20))
+                                            text_font=("Calibri Bold", -20))
         self.roi_lbl.grid(row=0, column=2, columnspan=1, pady=20, padx=10, sticky="n")
 
         # 'Right hand' choice
         self.checkbox_var_RHand = IntVar(value=0)  # init checkbox
         self.right_hand_roi_choice = CTkCheckBox(master=self.frame_right, text="Right Hand",
-                                                 command=self.__toggle_state(self.checkbox_var_RHand),
-                                                 variable=self.checkbox_var_RHand, onvalue="on", offvalue="off")
+                                                command=self.__toggle_state(self.checkbox_var_RHand),
+                                                variable=self.checkbox_var_RHand, onvalue="on", offvalue="off")
         self.right_hand_roi_choice.grid(row=1, column=2, pady=10, padx=20, sticky="n")
 
         # 'Left hand' choice
@@ -113,25 +113,25 @@ class App(customtkinter.CTk):
         # 'Pose' choice
         self.checkbox_var_pose = IntVar(value=0)  # init checkbox
         self.pose_roi_choice = CTkCheckBox(master=self.frame_right, text="Pose          ",
-                                           command=self.__toggle_state(self.checkbox_var_pose),
-                                           variable=self.checkbox_var_pose, onvalue="on", offvalue="off")
+                                        command=self.__toggle_state(self.checkbox_var_pose),
+                                        variable=self.checkbox_var_pose, onvalue="on", offvalue="off")
         self.pose_roi_choice.grid(row=3, column=2, pady=10, padx=20, sticky="n")
 
         # set the 'Percentage Deviation' label and values slider
         self.perc_dev_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Percentage Deviation:",
-                                                   text_font=("Calibri Bold", -20))
+                                                text_font=("Calibri Bold", -20))
         self.perc_dev_lbl.grid(row=4, column=0, columnspan=2, pady=10, sticky="ns")
 
-        self.slider = customtkinter.CTkSlider(master=self.frame_right, command=self.__prec_slider_handler, from_=0,
-                                              to=1)
+        self.slider = customtkinter.CTkSlider(master=self.frame_right, command=self.__prec_slider_handler, 
+                                            from_=0, to=1)
         self.slider.grid(row=5, column=0, columnspan=1, pady=10, padx=125, sticky="ns")
         self.slider.set(0.0)
 
         # set the 'Start Analysis' button
         self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=105,
-                                                 fg_color='gray', hover_color='green', text="Start Analysis",
-                                                 corner_radius=15, text_font=("Calibri Bold", -18),
-                                                 command=self.__start_btn_handler)
+                                                fg_color='gray', hover_color='green', text="Start Analysis",
+                                                corner_radius=15, text_font=("Calibri Bold", -18),
+                                                command=self.__start_btn_handler)
         self.start_btn.grid(row=6, column=0, columnspan=3, pady=10, padx=135, sticky="w")
 
     # set the shown float values in format .2f for the 'Percentage Deviation' slider
@@ -174,12 +174,12 @@ class App(customtkinter.CTk):
         else:
             # add option to export the analysis result reports (set label and button)
             self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
-                                                     text_font=("Calibri Bold", -20))  # font name and size in px
+                                                    text_font=("Calibri Bold", -20))  # font name and size in px
             self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
 
             self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
-                                                          text="", width=30, height=30,
-                                                          compound="right", command=self.__report_btn_handler)
+                                                        text="", width=30, height=30,
+                                                        compound="right", command=self.__report_btn_handler)
             self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
 
             # show to the user the synchronization rate
@@ -224,25 +224,25 @@ class App(customtkinter.CTk):
         # export txt raw data choice
         checkbox_var_txt = IntVar(value=0)  # init checkbox
         self.txt_choice = CTkCheckBox(master=self.export_popup, text="Raw Data", text_color='black',
-                                      command=self.__toggle_state(checkbox_var_txt),
-                                      variable=checkbox_var_txt, onvalue="on", offvalue="off")
+                                    command=self.__toggle_state(checkbox_var_txt),
+                                    variable=checkbox_var_txt, onvalue="on", offvalue="off")
         self.txt_choice.grid(row=1, column=0, pady=10, padx=60)
 
         # export pdf report choice
         checkbox_var_pdf = IntVar(value=0)  # init checkbox
         self.pdf_choice = CTkCheckBox(master=self.export_popup, text="Report      ", text_color='black',
-                                      command=self.__toggle_state(checkbox_var_pdf),
-                                      variable=checkbox_var_pdf, onvalue="on", offvalue="off")
+                                    command=self.__toggle_state(checkbox_var_pdf),
+                                    variable=checkbox_var_pdf, onvalue="on", offvalue="off")
         self.pdf_choice.grid(row=2, column=0, pady=10, padx=60)
 
         # set export label and button
         select_type_lbl = customtkinter.CTkLabel(master=self.export_popup, text="Select File to Export:",
-                                                 text_color='black', text_font=("Calibri Bold", -20))
+                                                text_color='black', text_font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=0, pady=10, padx=60)
 
         export_btn = customtkinter.CTkButton(master=self.export_popup, text="Export", width=70, height=40,
-                                             fg_color='gray', hover_color='green',
-                                             compound="right", command=self.__export_handler)
+                                            fg_color='gray', hover_color='green',
+                                            compound="right", command=self.__export_handler)
         export_btn.grid(row=3, column=0, pady=10, padx=60)
 
         # pop the export window
@@ -275,12 +275,12 @@ class App(customtkinter.CTk):
 
             # set the 'Open Report' label and the 'Show in File Explorer' button.
             self.open_report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Open Report",
-                                                          text_font=("Calibri Bold", -20))  # font name and size in px
+                                                        text_font=("Calibri Bold", -20))  # font name and size in px
             self.open_report_lbl.grid(row=5, column=0, pady=40, padx=10, sticky="n")
 
             self.folder_btn = customtkinter.CTkButton(master=self.frame_left, image=folder_image,
-                                                      text="", width=30, height=30,
-                                                      compound="left", command=self.__show_in_explorer_btn_handler)
+                                                    text="", width=30, height=30,
+                                                    compound="left", command=self.__show_in_explorer_btn_handler)
             self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
 
             # TODO: save an empty txt file
@@ -289,9 +289,9 @@ class App(customtkinter.CTk):
 
                 # set the 'Raw Data' label and the 'Open Raw Data' button
                 self.txt_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
-                                                                  text="", width=30, height=30,
-                                                                  compound="left",
-                                                                  command=self.__show_report_btn_handler)
+                                                                text="", width=30, height=30,
+                                                                compound="left",
+                                                                command=self.__show_report_btn_handler)
 
                 sticky = "n" if len(
                     selected_checkboxes) == 1 else "nw"  # appers in the middle if this report is the only one
@@ -305,9 +305,9 @@ class App(customtkinter.CTk):
 
                 # set the 'Raw Data' label and the 'Open Report' button
                 self.pdf_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
-                                                                  text="", width=30, height=30,
-                                                                  compound="left",
-                                                                  command=self.__show_report_btn_handler)
+                                                                text="", width=30, height=30,
+                                                                compound="left",
+                                                                command=self.__show_report_btn_handler)
 
                 sticky = "n" if len(
                     selected_checkboxes) == 1 else "ne"  # appers in the middle if this report is the only one
@@ -339,8 +339,8 @@ class App(customtkinter.CTk):
     # load image as PhotoImage
     def __load_image(self, name, width, height):
         image = ImageTk.PhotoImage(Image.open
-                                   (PATH + f"\\resources\\images\\{name}").resize((width, height),
-                                    Image.Resampling.LANCZOS))
+                                (PATH + f"\\resources\\images\\{name}").resize((width, height),
+                                Image.Resampling.LANCZOS))
 
         # PhotoImage object is garbage-collected by Python,
         # so the image is cleared even if it’s being displayed by a Tkinter widget.
@@ -366,12 +366,12 @@ class App(customtkinter.CTk):
 
         # set the label and button
         select_type_lbl = customtkinter.CTkLabel(master=msg_popup, text=message,
-                                                 text_color='black', text_font=("Calibri Bold", -20))
+                                                text_color='black', text_font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
 
         btn = customtkinter.CTkButton(master=msg_popup, text=button, width=70, height=40,
-                                      fg_color='gray', hover_color='green', compound="right",
-                                      command=msg_popup.destroy)
+                                    fg_color='gray', hover_color='green', compound="right",
+                                    command=msg_popup.destroy)
         btn.grid(row=1, column=3, padx=190, sticky='ns')
 
         # pop the message
