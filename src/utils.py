@@ -1,15 +1,14 @@
-
 import os
 import time
 import sys
 import tkinter as tk
-from tkinter import filedialog#, Tk
+from tkinter import filedialog
 from tkvideo import tkvideo
 import cv2
 import mediapipe as mp
 
-
 PATH = os.path.dirname(os.path.realpath(__file__))
+
 
 # TODO check if GUI workes, then change it
 # # create new popup window and set it's properties
@@ -20,7 +19,7 @@ PATH = os.path.dirname(os.path.realpath(__file__))
 #         popup.title(title)
 #         popup.geometry(f"{width}x{height}")
 
-class Video():
+class Video:
     def __init__(self, frame):
         root = frame
         my_label = tk.Label(root)
@@ -34,8 +33,8 @@ class Video():
 
     def video_loader_btn_handler(self):
         filename_path = filedialog.askopenfilename(initialdir=PATH,
-                                                title="Select a File",
-                                                filetypes=(("Video files","*.mp4*")))
+                                                   title="Select a File",
+                                                   filetypes=(('Video files', '*.mp4'),))
 
         if filename_path in ["", " "]:
             return False
@@ -49,22 +48,22 @@ class Video():
         if frame is None:
             return
 
-        width = int(frame.shape[1] * scale) # must be an integer
-        height = int(frame.shape[0] * scale) # must be an integer
+        width = int(frame.shape[1] * scale)  # must be an integer
+        height = int(frame.shape[0] * scale)  # must be an integer
         dimensions = (width, height)
 
         return cv2.resize(frame, dimensions, interpolation=cv2.INTER_AREA)
 
     @staticmethod
     def detect_object(video_path, output):
-        mp_drawing = mp.solutions.drawing_utils # set up MediaPipe
-        mp_holistic = mp.solutions.holistic # set up holistic module
+        mp_drawing = mp.solutions.drawing_utils  # set up MediaPipe
+        mp_holistic = mp.solutions.holistic  # set up holistic module
 
         # ** large photos and videos are need to be rescaling and resizing ** #
 
-        mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2) # apply styling
+        mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)  # apply styling
 
-        cap = cv2.VideoCapture(video_path) # import video from file
+        cap = cv2.VideoCapture(video_path)  # import video from file
 
         # Initialize min/max default values
         maxSize = sys.maxsize
@@ -76,19 +75,19 @@ class Video():
 
         # Initiate holistic model
         with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-            cnt = 0 # indicates the frame number
+            cnt = 0  # indicates the frame number
 
             while cap.isOpened():
-                ret, frame = cap.read() # ret is unsed but nessesery due cap.read() return a tuple
+                ret, frame = cap.read()  # ret is unsed but nessesery due cap.read() return a tuple
 
                 if frame is None:
                     break
 
-                frame_resized = Video.rescaleFrame(frame, scale=1) # resize big video
-                image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB) # recolor feed
-                results = holistic.process(image) # make detections
+                frame_resized = Video.rescaleFrame(frame, scale=1)  # resize big video
+                image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)  # recolor feed
+                results = holistic.process(image)  # make detections
 
-                print(results.pose_landmarks.landmark) # print coordinates
+                print(results.pose_landmarks.landmark)  # print coordinates
 
                 # Loop on landmarks set for finding min,max of (x,y)
                 for land_mark in results.pose_landmarks.landmark:
@@ -104,10 +103,10 @@ class Video():
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                                        mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
-                                        mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
+                                          mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
+                                          mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
-                cv2.imshow('Detected Video', image) # show the video feed
+                cv2.imshow('Detected Video', image)  # show the video feed
 
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
@@ -143,8 +142,8 @@ class Video():
 
     @staticmethod
     def crop_video(video_path, output, x_0_ratio, y_0_ratio, deltaX, deltaY):
-        cap = cv2.VideoCapture(video_path) # open the video
-        cnt = 0 # initialize frame counter
+        cap = cv2.VideoCapture(video_path)  # open the video
+        cnt = 0  # initialize frame counter
 
         # Some characteristics from the original video
         w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -178,7 +177,7 @@ class Video():
                 xx = cnt * 100 / frames
                 print(int(xx), '%\n')
 
-                out.write(crop_frame) # save the new video
+                out.write(crop_frame)  # save the new video
 
                 # see the video in real time
                 cv2.imshow('frame', frame)
