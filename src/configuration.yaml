@@ -2,3 +2,11 @@ GUI:
   APP:
     WIDTH: 850
     HEIGHT: 600
+
+VIDEO_PATHS:
+  first_object: src\\resources\\videos\\results\\1st_result.mp4
+  first_object2: src\\resources\\videos\\results\\1st_result2.mp4
+  second_object: src\\resources\\videos\\results\\2nd_result.mp4
+  second_object2: src\\resources\\videos\\results\\2nd_result2.mp4
+  mid_res: src\\resources\\videos\\results\\middle_result.mp4
+  res: src\\resources\\videos\\results\\
