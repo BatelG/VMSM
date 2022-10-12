@@ -1,9 +1,13 @@
+import shutil
 from tkinter import *
+
+import moviepy
 import yaml
 from PIL import ImageTk, Image
 import customtkinter
 from customtkinter import CTkCheckBox
 from .utils import *
+import moviepy.editor as mpy
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -185,21 +189,104 @@ class App(customtkinter.CTk):
             # show to the user the synchronization rate
             # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
             # TODO: in the future, send the grade as is, without 'round' method (?)
-            sync_rate, padx, color = self.__get_synchronization_rate(round(self.slider.get(), 2))
 
-            # set the 'Synchronization Rate' label
-            self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, text_font=("Calibri Bold", -20))
-            self.sync_rate_lbl.grid(row=7, column=0, columnspan=3, pady=10, sticky="nw")
+            ##############################################################
+            video_path = self.video.path
 
-            # configure the right values, according to the grade
-            self.sync_rate_lbl.configure(text=sync_rate, text_color=color)
-            self.sync_rate_lbl.grid(padx=padx)
+            import os
+            import glob
 
-            # pop a success message
-            title = "Start Success"
-            message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
+            if os.path.exists(config['VIDEO_PATHS']['res']):
+                shutil.rmtree(config['VIDEO_PATHS']['res'])
+                os.mkdir(config['VIDEO_PATHS']['res'])
+            else:
+                os.mkdir(config['VIDEO_PATHS']['res'])
 
-            self.__message(title, message, "ok")
+            # *** The following actions ar4e happening after user press "Start" button ***
+
+            # crop the first object from the video
+            minX, maxX = Video.detect_object(video_path, config['VIDEO_PATHS']['first_object'])
+
+            # find the other object
+            if maxX > 0.5:
+                Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1)
+            if minX > 0.5:
+                Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1)
+
+            # crop the second object from remain video
+            Video.detect_object(config['VIDEO_PATHS']['mid_res'], config['VIDEO_PATHS']['second_object'])
+
+            # getting the dimension of the videos
+            vid = cv2.VideoCapture(config['VIDEO_PATHS']['first_object'])
+            height1 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            width1 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+            vid = cv2.VideoCapture(config['VIDEO_PATHS']['second_object'])
+            height2 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            width2 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+            print("before transformations:")
+            print(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
+
+            print('start to do transformations...')
+
+            # compare between the 2 object dimension, the bigger one pass an resize + scaling transformations
+            if width1 + height1 >= width2 + height2:
+                new_h = int(height2)
+                new_w = int(width2)
+                new_path = config['VIDEO_PATHS']['first_object2']
+                path = config['VIDEO_PATHS']['first_object']
+
+                clip = mpy.VideoFileClip(path)
+                clip_resized = clip.resize((new_w, new_h))
+                clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
+                clip_resized_mirrored.write_videofile(new_path)
+
+                vid1 = cv2.VideoCapture(config['VIDEO_PATHS']['second_object'])
+                height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+            else:
+                new_h = int(height1)
+                new_w = int(width1)
+                path = config['VIDEO_PATHS']['second_object']
+                new_path = config['VIDEO_PATHS']['second_object2']
+
+                clip = mpy.VideoFileClip(path)
+                clip_resized = clip.resize((new_w, new_h))
+                clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
+                clip_resized_mirrored.write_videofile(new_path)
+
+                vid1 = cv2.VideoCapture(config['VIDEO_PATHS']['first_object'])
+                height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+        # TODO remove the check lines
+
+        vid2 = cv2.VideoCapture(new_path)
+        height2 = vid2.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        width2 = vid2.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+        print("after transformations:")
+        print(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
+
+        ###############################################################
+
+        sync_rate, padx, color = self.__get_synchronization_rate(round(self.slider.get(), 2))
+
+        # set the 'Synchronization Rate' label
+        self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, text_font=("Calibri Bold", -20))
+        self.sync_rate_lbl.grid(row=7, column=0, columnspan=3, pady=10, sticky="nw")
+
+        # configure the right values, according to the grade
+        self.sync_rate_lbl.configure(text=sync_rate, text_color=color)
+        self.sync_rate_lbl.grid(padx=padx)
+
+        # pop a success message
+        title = "Start Success"
+        message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
+
+        self.__message(title, message, "ok")
 
     # get the synchronization rate and label configuration values, according to the grade
     def __get_synchronization_rate(self, grade):

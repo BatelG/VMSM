@@ -4,3 +4,4 @@ reportlab
 pylint
 mediapipe
 pyyaml
+moviepy

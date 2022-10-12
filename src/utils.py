@@ -31,6 +31,7 @@ class Video:
             player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             player.play()
 
+
     def video_loader_btn_handler(self):
         filename_path = filedialog.askopenfilename(initialdir=PATH,
                                                    title="Select a File",
@@ -78,7 +79,7 @@ class Video:
             cnt = 0  # indicates the frame number
 
             while cap.isOpened():
-                ret, frame = cap.read()  # ret is unsed but nessesery due cap.read() return a tuple
+                ret, frame = cap.read()  # ret is unused but necessary due cap.read() return a tuple
 
                 if frame is None:
                     break
@@ -87,6 +88,8 @@ class Video:
                 image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)  # recolor feed
                 results = holistic.process(image)  # make detections
 
+                if not results.pose_landmarks:
+                    break
                 print(results.pose_landmarks.landmark)  # print coordinates
 
                 # Loop on landmarks set for finding min,max of (x,y)

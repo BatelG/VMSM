@@ -7,16 +7,13 @@ from src.utils import Video
 def main():
     app = App()
     app.start()
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    # double_cropping()
 
 
 def double_cropping():
-    video_path = r'src\\resources\\videos\\istockphoto-1382942438-640_adpp_is.mp4'
+    video_path = r"C:\final_project\VMSM\src\resources\videos\WhatsApp Video 2022-07-19 at 20.38.35.mp4"
 
-    # *** The following actions ar4e happening after user press "Start" button ***
+    # *** The following actions are happening after user press "Start" button ***
 
     # crop the first object from the video
     minX, maxX = Video.detect_object(video_path, r'src\\resources\\videos\\results\\1st_result.mp4')
@@ -31,3 +28,7 @@ def double_cropping():
 
     # crop the second object from remain video
     Video.detect_object(output, r'src\\resources\\videos\\results\\2nd_result.mp4')
+
+
+if __name__ == "__main__":
+    main()
