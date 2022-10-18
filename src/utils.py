@@ -3,6 +3,8 @@ import time
 import sys
 import tkinter as tk
 from tkinter import filedialog
+
+import pandas
 from tkvideo import tkvideo
 import cv2
 import mediapipe as mp
@@ -19,6 +21,67 @@ PATH = os.path.dirname(os.path.realpath(__file__))
 #         popup.title(title)
 #         popup.geometry(f"{width}x{height}")
 
+def get_c_mass(roi, lst_res):
+    c_mass_x, c_mass_y, x_sum, y_sum, cnt = 0, 0, 0, 0, 0
+    lst_vals = []
+    try:
+        for result in lst_res:
+            if eval(f'result.{roi}_landmarks') is None:
+                continue
+            for land_mark in eval(f'result.{roi}_landmarks.landmark'):
+                x_sum += land_mark.x
+                y_sum += land_mark.y
+                cnt += 1
+            x_sum /= cnt
+            y_sum /= cnt
+            c_mass_x = x_sum
+            c_mass_y = y_sum
+            x_sum, y_sum, cnt = 0, 0, 0
+            lst_vals.append([c_mass_x, c_mass_y])
+    except Exception as e:
+        print(e)
+    return pandas.DataFrame(lst_vals, columns=['c_mass_x', 'c_mass_y'])
+
+
+def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice, path):
+    mp_drawing = mp.solutions.drawing_utils  # set up MediaPipe
+    mp_holistic = mp.solutions.holistic  # set up holistic module
+    cap = cv2.VideoCapture(path)  # import video from file
+    # Initiate holistic model
+    lst_res = []
+    lst_df = []
+    with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+        cnt = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+
+            # Recolor Feed
+            if frame is None:
+                break
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # resized frame
+            # image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) ## change to that when live webcam
+
+            # Make Detections
+            results = holistic.process(image)
+            lst_res.append(results)
+    if len(lst_res) == 0:
+        raise Exception('MediaPipe is not working properly')
+
+    if right_hand_roi_choice in selected_checkboxes:
+        # 2. Right hand
+        lst_df.append({'right_hand': get_c_mass('right_hand', lst_res)})
+
+    if left_hand_roi_choice in selected_checkboxes:
+        # 3. Left Hand
+        lst_df.append({'left_hand': get_c_mass('left_hand', lst_res)})
+
+    if pose_roi_choice in selected_checkboxes:
+        # 4. Pose Detections
+        lst_df.append({'pose': get_c_mass('pose', lst_res)})
+
+    return lst_df
+
+
 class Video:
     def __init__(self, frame):
         root = frame
@@ -30,7 +93,6 @@ class Video:
         if self.path is not False:
             player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             player.play()
-
 
     def video_loader_btn_handler(self):
         filename_path = filedialog.askopenfilename(initialdir=PATH,
