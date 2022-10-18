@@ -8,6 +8,7 @@ import customtkinter
 from customtkinter import CTkCheckBox
 from .utils import *
 import moviepy.editor as mpy
+import pandas
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
