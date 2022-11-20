@@ -1,14 +1,11 @@
-import shutil
 from tkinter import *
-
-import moviepy
 import yaml
 from PIL import ImageTk, Image
 import customtkinter
 from customtkinter import CTkCheckBox
 from .utils import *
+from RangeSlider.RangeSlider import RangeSliderH, RangeSliderV
 import moviepy.editor as mpy
-import pandas
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -66,16 +63,23 @@ class App(customtkinter.CTk):
                                                 text_font=("Calibri Bold", -20))  # font name and size in px
         self.video_lbl.grid(row=1, column=0, pady=10, padx=10, sticky="n")
 
-        self.video_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.video_explore_image,
-                                                         text="", width=30, height=30,
-                                                         compound="right", command=self.__video_btn_handler)
-        self.video_explore_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
-
         # set the theme switcher
         self.Theme_switch = customtkinter.CTkSwitch(master=self.frame_left, text="Dark Mode",
                                                     command=self.__change_mode)
         self.Theme_switch.grid(row=10, column=0, pady=10, padx=20, sticky="w")
         self.Theme_switch.select()
+
+        # set cutting video slider
+        self.video_slider_max_val = 1
+        self.video_slider_bg = self.Theme_switch.bg_color[1]
+        self.video_slider_line_s = '#4A4D50'
+        self.video_slider_line = '#AAB0B5'
+        self.add_video_slider()
+
+        self.video_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.video_explore_image,
+                                                         text="", width=30, height=30,
+                                                         compound="right", command=self.__video_btn_handler)
+        self.video_explore_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
 
         # ============ frame_right ============
 
@@ -125,11 +129,11 @@ class App(customtkinter.CTk):
         # set the 'Percentage Deviation' label and values slider
         self.perc_dev_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Percentage Deviation:",
                                                    text_font=("Calibri Bold", -20))
-        self.perc_dev_lbl.grid(row=4, column=0, columnspan=2, pady=10, sticky="ns")
+        self.perc_dev_lbl.grid(row=5, column=0, columnspan=2, pady=10, sticky="ns")
 
         self.slider = customtkinter.CTkSlider(master=self.frame_right, command=self.__prec_slider_handler,
                                               from_=0, to=1)
-        self.slider.grid(row=5, column=0, columnspan=1, pady=10, padx=125, sticky="ns")
+        self.slider.grid(row=6, column=0, columnspan=1, pady=10, padx=125, sticky="ns")
         self.slider.set(0.0)
 
         # set the 'Start Analysis' button
@@ -137,7 +141,7 @@ class App(customtkinter.CTk):
                                                  fg_color='gray', hover_color='green', text="Start Analysis",
                                                  corner_radius=15, text_font=("Calibri Bold", -18),
                                                  command=self.__start_btn_handler)
-        self.start_btn.grid(row=6, column=0, columnspan=3, pady=10, padx=135, sticky="w")
+        self.start_btn.grid(row=7, column=0, columnspan=3, pady=10, padx=150, sticky="w")
 
     # set the shown float values in format .2f for the 'Percentage Deviation' slider
     def __prec_slider_handler(self, val):
@@ -148,6 +152,9 @@ class App(customtkinter.CTk):
         video_frame = customtkinter.CTkFrame(self.frame_info)
         video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
         self.video = Video(video_frame)
+        self.video_slider_max_val = int(mpy.VideoFileClip(self.video.path).duration)
+        self.rs1.max_val = self.video_slider_max_val
+        self.add_video_slider()
 
     def __start_btn_handler(self):
         time.sleep(1)
@@ -191,87 +198,8 @@ class App(customtkinter.CTk):
             # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
             # TODO: in the future, send the grade as is, without 'round' method (?)
 
-            ##############################################################
-            video_path = self.video.path
-
-            import os
-            import glob
-
-            if os.path.exists(config['VIDEO_PATHS']['res']):
-                shutil.rmtree(config['VIDEO_PATHS']['res'])
-                os.mkdir(config['VIDEO_PATHS']['res'])
-            else:
-                os.mkdir(config['VIDEO_PATHS']['res'])
-
-            # *** The following actions ar4e happening after user press "Start" button ***
-
-            # crop the first object from the video
-            minX, maxX = Video.detect_object(video_path, config['VIDEO_PATHS']['first_object'])
-
-            # find the other object
-            if maxX > 0.5:
-                Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1)
-            if minX > 0.5:
-                Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1)
-
-            # crop the second object from remain video
-            Video.detect_object(config['VIDEO_PATHS']['mid_res'], config['VIDEO_PATHS']['second_object'])
-
-            # getting the dimension of the videos
-            vid = cv2.VideoCapture(config['VIDEO_PATHS']['first_object'])
-            height1 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            width1 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-            vid = cv2.VideoCapture(config['VIDEO_PATHS']['second_object'])
-            height2 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            width2 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-            print("before transformations:")
-            print(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
-
-            print('start to do transformations...')
-
-            # compare between the 2 object dimension, the bigger one pass an resize + scaling transformations
-            if width1 + height1 >= width2 + height2:
-                new_h = int(height2)
-                new_w = int(width2)
-                new_path = config['VIDEO_PATHS']['first_object2']
-                path = config['VIDEO_PATHS']['first_object']
-
-                clip = mpy.VideoFileClip(path)
-                clip_resized = clip.resize((new_w, new_h))
-                clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
-                clip_resized_mirrored.write_videofile(new_path)
-
-                vid1 = cv2.VideoCapture(config['VIDEO_PATHS']['second_object'])
-                height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-            else:
-                new_h = int(height1)
-                new_w = int(width1)
-                path = config['VIDEO_PATHS']['second_object']
-                new_path = config['VIDEO_PATHS']['second_object2']
-
-                clip = mpy.VideoFileClip(path)
-                clip_resized = clip.resize((new_w, new_h))
-                clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
-                clip_resized_mirrored.write_videofile(new_path)
-
-                vid1 = cv2.VideoCapture(config['VIDEO_PATHS']['first_object'])
-                height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-        # TODO remove the check lines
-
-        vid2 = cv2.VideoCapture(new_path)
-        height2 = vid2.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        width2 = vid2.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-        print("after transformations:")
-        print(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
-
-        ###############################################################
+        get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+                    self.pose_roi_choice)
 
         sync_rate, padx, color = self.__get_synchronization_rate(round(self.slider.get(), 2))
 
@@ -288,6 +216,7 @@ class App(customtkinter.CTk):
         message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
 
         self.__message(title, message, "ok")
+
 
     # get the synchronization rate and label configuration values, according to the grade
     def __get_synchronization_rate(self, grade):
@@ -470,13 +399,31 @@ class App(customtkinter.CTk):
         if self.Theme_switch.get() == 1:
             customtkinter.set_appearance_mode("dark")
             self.Theme_switch.text = "Light Mode"
+            self.video_slider_bg = self.Theme_switch.bg_color[1]
+            self.video_slider_line_s = '#4A4D50'
+            self.video_slider_line = '#AAB0B5'
         else:
             customtkinter.set_appearance_mode("light")
             self.Theme_switch.text = "Dark Mode"
+            self.video_slider_bg = self.Theme_switch.bg_color[0]
+            self.video_slider_line_s = '#AAB0B5'
+            self.video_slider_line = '#4A4D50'
+
+        self.add_video_slider()
+
+    # set cutting video slider
+    def add_video_slider(self):
+        hVar1 = tk.IntVar()
+        hVar2 = tk.IntVar()
+        self.rs1 = RangeSliderH(master=self.frame_right, variables=[hVar1, hVar2], Width=400, Height=65, padX=50, min_val=0, max_val=self.video_slider_max_val, show_value=True, line_s_color=self.video_slider_line_s,
+                            bgColor=self.video_slider_bg, suffix=" sec", digit_precision=".0f", font_size=9, line_color=self.video_slider_line, font_family="Calibri-bold", bar_color_inner="#1F6AA5",
+                            bar_color_outer="#1F6AA5", bar_radius=8, line_width=4)
+        self.rs1.grid(row=4, column=0, padx=10, pady=10)
 
     # handler for closing the main frame
     def __on_closing(self, event=0):
         self.destroy()
+        post_routine() # delete results folder
 
     # run the main frame
     def start(self):

@@ -6,3 +6,4 @@ mediapipe
 pyyaml
 moviepy
 pandas
+RangeSlider
