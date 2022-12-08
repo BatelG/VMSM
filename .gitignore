@@ -20,6 +20,18 @@ __pycache__/
 # test videos
 videos/
 
+# mp3
+*.mp3
+
+# csv
+*.csv
+
+# txt
+*.txt
+
+# pdf
+*.pdf
+
 # Distribution / packaging
 .Python
 build/

@@ -72,7 +72,7 @@ def get_c_mass(roi, lst_res):
                 x_sum, y_sum, cnt = 0, 0, 0
                 lst_vals.append([c_mass_x, c_mass_y])
     except Exception as e:
-        print(e)
+        raise e
     return pandas.DataFrame(lst_vals, columns=['c_mass_x', 'c_mass_y'])
 
 
@@ -91,31 +91,36 @@ def _create_distance_chart(lst_df, object):
             lst_vals = []
 
             for idx, val in enumerate(ax_df):
-                if idx == len(ax_df) - 1:
-                    break
-                # Only frames where both objects were detected are counted
-                if (ax_df[idx] == 0 or ay_df[idx] == 0) and (ax_df[idx+1] == 0 or ay_df[idx+1] == 0):
-                    number_of_illegal_frames += 1
-                    if number_of_illegal_frames == config['VIDEO_PROCESSING']['ALLOW']['FOLLOWING_FRAMES_THRESHOLD']:
-                        # TODO informed the user in case of missing information
-                        print(f'there is not enough data at roi: {key} object - {object}')
-                        data_flag = True
+                try:
+                    if idx == len(ax_df) - 1:
                         break
+                    # Only frames where both objects were detected are counted
+                    if (ax_df[idx] == 0 or ay_df[idx] == 0) and (ax_df[idx+1] == 0 or ay_df[idx+1] == 0):
+                        number_of_illegal_frames += 1
+                        if number_of_illegal_frames == config['VIDEO_PROCESSING']['ALLOW']['FOLLOWING_FRAMES_THRESHOLD']:
+                            # TODO informed the user in case of missing information
+                            print(f'there is not enough data at roi: {key} object - {object}')
+                            data_flag = True
+                            break
+                        continue
+
+                    ax = ax_df[idx]
+                    ay = ay_df[idx]
+
+                    bx = ax_df[idx + 1]
+                    by = ay_df[idx + 1]
+
+                    point_a = numpy.array((ax, ay))
+                    point_b = numpy.array((bx, by))
+
+                    dist = numpy.linalg.norm(point_a - point_b)
+                    lst_vals.append([dist])
+                except Exception:
                     continue
 
-                ax = ax_df[idx]
-                ay = ay_df[idx]
-
-                bx = ax_df[idx + 1]
-                by = ay_df[idx + 1]
-
-                point_a = numpy.array((ax, ay))
-                point_b = numpy.array((bx, by))
-
-                dist = numpy.linalg.norm(point_a - point_b)
-                lst_vals.append([dist])
             if not data_flag:
                 lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['distance'])})
+
         for dict in lst_of_dist_dict:
             for key in dict.keys():
                 df = dict[key].reset_index()
@@ -152,21 +157,25 @@ def create_distance_chart(lst_df, lst_df2):
             lst_vals = []
 
             for idx, val in enumerate(ax_df):
-                # Only frames where both objects were detected are counted
-                if ax_df[idx] == 0 or bx_df[idx] == 0 or ay_df[idx] == 0 or by_df[idx] == 0:
-                    number_of_illegal_frames += 1
+                try:
+                    # Only frames where both objects were detected are counted
+                    if ax_df[idx] == 0 or bx_df[idx] == 0 or ay_df[idx] == 0 or by_df[idx] == 0:
+                        number_of_illegal_frames += 1
+                        continue
+                    ax = ax_df[idx]
+                    ay = ay_df[idx]
+
+                    bx = bx_df[idx]
+                    by = by_df[idx]
+
+                    point_a = numpy.array((ax, ay))
+                    point_b = numpy.array((bx, by))
+
+                    dist = numpy.linalg.norm(point_a - point_b)
+                    lst_vals.append([dist])
+                except Exception:
                     continue
-                ax = ax_df[idx]
-                ay = ay_df[idx]
 
-                bx = bx_df[idx]
-                by = by_df[idx]
-
-                point_a = numpy.array((ax, ay))
-                point_b = numpy.array((bx, by))
-
-                dist = numpy.linalg.norm(point_a - point_b)
-                lst_vals.append([dist])
             lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['distance'])})
             illegal_frames.append({key: number_of_illegal_frames})
 
@@ -181,6 +190,8 @@ def create_distance_chart(lst_df, lst_df2):
                 except Exception:
                     # TODO informed the user in case of missing information
                     print(f'there is not enough data at roi: {key} between the objects')
+
+    return lst_of_dist_dict
 
 
 def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice, path):
@@ -227,8 +238,6 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
                 pose_roi_choice):
     print(f"({datetime.datetime.now()}) *****get_synchronization*****")
 
-    pre_routine() # create results folder
-
     # *** The following actions are happening after user press "Start" button ***
 
     # TODO change the video path in case of cutting function has been selected
@@ -239,9 +248,9 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     minX, maxX = Video.detect_object(video_path, config['VIDEO_PATHS']['first_object'])
 
     # find the other object
-    if maxX > 0.5:
+    if maxX < 0.5:
         Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1)
-    if minX > 0.5:
+    else:
         Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1)
 
     # crop the second object from remain video
@@ -309,9 +318,39 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
                         pose_roi_choice, config['VIDEO_PATHS']['first_object'])
 
-    create_distance_chart(lst_df, lst_df2)
+    lst_of_dist_dict = create_distance_chart(lst_df, lst_df2)
     create_distance_chart(lst_df, 'Object A')
     create_distance_chart(lst_df2, 'Object B')
+
+    lst_avg = []
+
+    for dictionary in lst_of_dist_dict:
+        # calculate the avarage distance for each roi
+        for roi in dictionary.keys():
+            lst_avg.append(dictionary[roi]['distance'].mean())
+
+    return (sum(lst_avg)/len(lst_avg)), lst_of_dist_dict if len(lst_avg) > 0 else 1, lst_of_dist_dict # avarage distance of all rois
+
+
+# get the synchronization rate and label configuration values, according to the grade
+def get_synchronization_rate(nd, pd):
+    print(f"({datetime.datetime.now()}) *****get_synchronization_rate*****")
+
+    if nd >= pd:
+        grade = max(1-nd, 1-nd+pd)
+    else:
+        grade = min(1-nd, 1-nd+pd)
+
+    # the second value in 'range' method doesn't count
+    if 0 <= grade <= 0.33:
+        return "Weak Synchronization", 100, '#FF3200'
+    elif 0.34 <= grade <= 0.66:
+        return "Medium Synchronization", 92, '#FF9B00'
+    elif 0.67 <= grade <= 0.95:
+        return "Strong Synchronization", 88, '#C2C000'
+    else: # 0.96 <= grade <= 1
+        return "Perfect Synchronization", 88, '#359C25'
+
 
 class Video:
     def __init__(self, frame):
@@ -327,8 +366,8 @@ class Video:
 
     def video_loader_btn_handler(self): # TODO: change initialdir to c folder
         filename_path = filedialog.askopenfilename(initialdir=PATH,
-                                                   title="Select a File",
-                                                   filetypes=(('Video files', '*.mp4'),))
+            title="Select a File",
+            filetypes=(("MOV files", "*.mov"), ("MP4 files", "*.mp4"), ("AVI files", "*.avi")))
 
         if filename_path in ["", " "]:
             return False
@@ -336,6 +375,12 @@ class Video:
         print(filename_path)
 
         return str(filename_path)
+
+    def cut_video(self, min, max):
+        clip = mpy.VideoFileClip(self.path)
+        clip = clip.subclip(min, max)
+        clip.write_videofile(config['VIDEO_PATHS']['cutted'])
+        return config['VIDEO_PATHS']['cutted']
 
     @staticmethod
     def rescaleFrame(frame, scale=0.5):

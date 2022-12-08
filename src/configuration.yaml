@@ -10,6 +10,7 @@ VIDEO_PATHS:
   second_object2: results\\2nd_result2.mp4
   mid_res: results\\middle_result.mp4
   res: results\\
+  cutted: results\\cutted.mp4
 
 VIDEO_PROCESSING:
   ALLOW:
