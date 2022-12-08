@@ -198,10 +198,16 @@ class App(customtkinter.CTk):
             # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
             # TODO: in the future, send the grade as is, without 'round' method (?)
 
-        get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
-                    self.pose_roi_choice)
+        pre_routine() # create results folder
 
-        sync_rate, padx, color = self.__get_synchronization_rate(round(self.slider.get(), 2))
+        if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
+            avg_distance, lst_of_dist_dict = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+                    self.pose_roi_choice)
+        else:
+            avg_distance, lst_of_dist_dict = get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+                        self.pose_roi_choice)
+
+        sync_rate, padx, color = get_synchronization_rate(avg_distance, self.slider.get())
 
         # set the 'Synchronization Rate' label
         self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, text_font=("Calibri Bold", -20))
@@ -216,22 +222,6 @@ class App(customtkinter.CTk):
         message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
 
         self.__message(title, message, "ok")
-
-
-    # get the synchronization rate and label configuration values, according to the grade
-    def __get_synchronization_rate(self, grade):
-        if grade < 0 or grade > 1:
-            raise ValueError("The grade isn't normalized number !")
-
-        # the second value in 'range' method doesn't count
-        if 0 <= grade <= 0.33:
-            return "Weak Synchronization", 100, '#FF3200'
-        if 0.34 <= grade <= 0.66:
-            return "Medium Synchronization", 92, '#FF9B00'
-        if 0.67 <= grade <= 0.95:
-            return "Strong Synchronization", 88, '#C2C000'
-        if 0.96 <= grade <= 1:
-            return "Perfect Synchronization", 88, '#359C25'
 
     # handler for pressing the 'Reports Producer' button
     def __report_btn_handler(self):
@@ -315,6 +305,8 @@ class App(customtkinter.CTk):
                 self.txt_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
 
                 file_cnt = file_cnt + 1
+
+                # save raw data txt file
 
             # TODO: save an empty pdf file
             if "on" == self.pdf_choice.get():
@@ -413,9 +405,9 @@ class App(customtkinter.CTk):
 
     # set cutting video slider
     def add_video_slider(self):
-        hVar1 = tk.IntVar()
-        hVar2 = tk.IntVar()
-        self.rs1 = RangeSliderH(master=self.frame_right, variables=[hVar1, hVar2], Width=400, Height=65, padX=50, min_val=0, max_val=self.video_slider_max_val, show_value=True, line_s_color=self.video_slider_line_s,
+        self.hVar1 = tk.IntVar()
+        self.hVar2 = tk.IntVar()
+        self.rs1 = RangeSliderH(master=self.frame_right, variables=[self.hVar1, self.hVar2], Width=400, Height=65, padX=50, min_val=0, max_val=self.video_slider_max_val, show_value=True, line_s_color=self.video_slider_line_s,
                             bgColor=self.video_slider_bg, suffix=" sec", digit_precision=".0f", font_size=9, line_color=self.video_slider_line, font_family="Calibri-bold", bar_color_inner="#1F6AA5",
                             bar_color_outer="#1F6AA5", bar_radius=8, line_width=4)
         self.rs1.grid(row=4, column=0, padx=10, pady=10)
