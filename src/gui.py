@@ -6,9 +6,13 @@ from customtkinter import CTkCheckBox
 from .utils import *
 from RangeSlider.RangeSlider import RangeSliderH, RangeSliderV
 import moviepy.editor as mpy
+import pandas as pd
+import numpy as np
+
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
 
 with open(r'src\\configuration.yaml', 'r', encoding='utf-8') as c:
     config = yaml.safe_load(c)
@@ -64,13 +68,13 @@ class App(customtkinter.CTk):
         self.video_lbl.grid(row=1, column=0, pady=10, padx=10, sticky="n")
 
         # set the theme switcher
+        self.video_slider_max_val = 1
         self.Theme_switch = customtkinter.CTkSwitch(master=self.frame_left, text="Dark Mode",
                                                     command=self.__change_mode)
         self.Theme_switch.grid(row=10, column=0, pady=10, padx=20, sticky="w")
         self.Theme_switch.select()
 
         # set cutting video slider
-        self.video_slider_max_val = 1
         self.video_slider_bg = self.Theme_switch.bg_color[1]
         self.video_slider_line_s = '#4A4D50'
         self.video_slider_line = '#AAB0B5'
@@ -201,10 +205,10 @@ class App(customtkinter.CTk):
         pre_routine() # create results folder
 
         if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
-            avg_distance, lst_of_dist_dict = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+            avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
                     self.pose_roi_choice)
         else:
-            avg_distance, lst_of_dist_dict = get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+            avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
                         self.pose_roi_choice)
 
         sync_rate, padx, color = get_synchronization_rate(avg_distance, self.slider.get())
@@ -237,7 +241,7 @@ class App(customtkinter.CTk):
 
         # export pdf report choice
         checkbox_var_pdf = IntVar(value=0)  # init checkbox
-        self.pdf_choice = CTkCheckBox(master=self.export_popup, text="Report      ", text_color='black',
+        self.pdf_choice = CTkCheckBox(master=self.export_popup, text="PDF Report", text_color='black',
                                       command=self.__toggle_state(checkbox_var_pdf),
                                       variable=checkbox_var_pdf, onvalue="on", offvalue="off")
         self.pdf_choice.grid(row=2, column=0, pady=10, padx=60)
@@ -263,7 +267,7 @@ class App(customtkinter.CTk):
         # only the choices that are "on"
         for choice in report_choices:
             if choice.get() == "on":
-                selected_checkboxes.append(choice)
+                selected_checkboxes.append(choice.text)
 
         # at least one report type has to be selected
         if not selected_checkboxes:
@@ -273,7 +277,24 @@ class App(customtkinter.CTk):
 
             self.__message(title, message, "ok")
         else:
-            self.export_popup.destroy()
+            # open file dialog to get the diractory to sace the report
+            path = StringVar()
+            folder_path = filedialog.askdirectory()
+            path.set(folder_path)
+            rois = ['right_hand', 'left_hand', 'pose']
+
+            for choice in selected_checkboxes:
+                if choice == 'Raw Data':
+                    for roi in rois:
+                        for roi_dictA, roi_dictB in zip(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
+                            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys())):
+                                np.savetxt(f'{path.get()}\\raw_data_{roi}.txt', pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index().values, fmt='%3d %.2f %.2f')
+                                # TODO write to log that file was saved and the path
+                if choice == 'PDF Report':
+                    pass
+                # TODO if choice == 'CSV Report':
+                    #df.to_csv('raw_data_csv.csv')
+
             file_cnt = 0  # determines the message of the file saved popup
 
             # load image

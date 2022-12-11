@@ -1,5 +1,5 @@
 tkVideo
-customtkinter
+customtkinter==3.11
 reportlab
 pylint
 mediapipe

@@ -128,20 +128,19 @@ def _create_distance_chart(lst_df, object):
                 try:
                     df.plot(x='frame', y='distance', kind='line')
                     plt.title(f'distance of roi {key} between following frames - {object}')
-                    plt.savefig(f'distance chart between following frames of roi {key} - {object}')
+                    plt.savefig(f'{RES_PATH}distance chart between following frames of roi {key} - {object}')
                 except Exception:
                     # TODO informed the user in case of missing information
                     print(f'there is not enough data at roi: {key} object - {object}')
 
-
+    return lst_of_dist_dict
 
 # calculate Euclidean distance between two objects
 def create_distance_chart(lst_df, lst_df2):
     print(f"({datetime.datetime.now()}) *****create_distance_chart*****")
 
     if lst_df2.__class__ is str:
-        _create_distance_chart(lst_df, lst_df2)
-        return
+        return _create_distance_chart(lst_df, lst_df2)
 
     illegal_frames = []
     lst_of_dist_dict = []
@@ -186,7 +185,7 @@ def create_distance_chart(lst_df, lst_df2):
                 try:
                     df.plot(x='frame', y='distance', kind='line')
                     plt.title(f'distance of roi {key} between the two objects')
-                    plt.savefig(f'distance chart between the objects of roi {key}')
+                    plt.savefig(f'{RES_PATH}distance chart between the objects of roi {key}')
                 except Exception:
                     # TODO informed the user in case of missing information
                     print(f'there is not enough data at roi: {key} between the objects')
@@ -318,18 +317,20 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
                         pose_roi_choice, config['VIDEO_PATHS']['first_object'])
 
-    lst_of_dist_dict = create_distance_chart(lst_df, lst_df2)
-    create_distance_chart(lst_df, 'Object A')
-    create_distance_chart(lst_df2, 'Object B')
+    lst_of_dist_dict_between_objects = create_distance_chart(lst_df, lst_df2)
+    lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Object A')
+    lst_of_dist_dict_objectB = create_distance_chart(lst_df2, 'Object B')
 
     lst_avg = []
 
-    for dictionary in lst_of_dist_dict:
+    for dictionary in lst_of_dist_dict_between_objects:
         # calculate the avarage distance for each roi
         for roi in dictionary.keys():
             lst_avg.append(dictionary[roi]['distance'].mean())
 
-    return (sum(lst_avg)/len(lst_avg)), lst_of_dist_dict if len(lst_avg) > 0 else 1, lst_of_dist_dict # avarage distance of all rois
+    rate = (sum(lst_avg)/len(lst_avg)) if len(lst_avg) > 0 else 1
+
+    return rate, lst_of_dist_dict_between_objects, lst_of_dist_dict_objectA, lst_of_dist_dict_objectB # avarage distance of all rois
 
 
 # get the synchronization rate and label configuration values, according to the grade
@@ -363,11 +364,11 @@ class Video:
         if self.path is not False:
             player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             player.play()
-
+    # TODO convert video file to MP4 !!!!!!!!!!!!!!!!!!!!!!!!!!
     def video_loader_btn_handler(self): # TODO: change initialdir to c folder
         filename_path = filedialog.askopenfilename(initialdir=PATH,
             title="Select a File",
-            filetypes=(("MOV files", "*.mov"), ("MP4 files", "*.mp4"), ("AVI files", "*.avi")))
+            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
 
         if filename_path in ["", " "]:
             return False
