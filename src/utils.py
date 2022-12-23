@@ -211,7 +211,6 @@ def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pos
             if frame is None:
                 break
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # resized frame
-            # image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) ## change to that when live webcam
 
             # Make Detections
             results = holistic.process(image)
