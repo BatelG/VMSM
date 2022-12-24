@@ -3,6 +3,7 @@ import shutil
 import moviepy
 import datetime
 import shutil
+from threading import Thread
 import time
 import sys
 import tkinter as tk
@@ -246,10 +247,25 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     minX, maxX = Video.detect_object(video_path, config['VIDEO_PATHS']['first_object'])
 
     # find the other object
-    if maxX < 0.5:
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1)
-    else:
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1)
+    # x_0_ratio, y_0_ratio, deltaX, deltaY
+    # if maxX > 0.5:
+    #     Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+    # if minX > 0.5:
+    #     Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+    if minX > 0.25 and minX > 0.75:
+        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+    elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
+        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+    #####
+    elif minX > 0.33 and minX > 0.77:
+        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+    elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
+        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+    #####
+    elif maxX > 0.5 and minX > 0.5:
+        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+    elif (maxX < 0.5 and minX < 0.5) or (maxX > 0.5 and minX < 0.5):
+        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
 
     # crop the second object from remain video
     Video.detect_object(config['VIDEO_PATHS']['mid_res'], config['VIDEO_PATHS']['second_object'])
@@ -352,6 +368,11 @@ def get_synchronization_rate(nd, pd):
         return "Perfect Synchronization", 88, '#359C25'
 
 
+class ExecThread:
+    def thread_excecuter(self, function, *args):
+        Thread(target=function, args=args).start()
+
+
 class Video:
     def __init__(self, frame):
         root = frame
@@ -363,24 +384,77 @@ class Video:
         if self.path is not False:
             player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             player.play()
-    # TODO convert video file to MP4 !!!!!!!!!!!!!!!!!!!!!!!!!!
-    def video_loader_btn_handler(self): # TODO: change initialdir to c folder
+
+    def video_loader_btn_handler(self): # TODO: after debug is done, change initial dir to c folder
         filename_path = filedialog.askopenfilename(initialdir=PATH,
             title="Select a File",
-            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
+            filetypes=(("MOV files", "*.mov"), ("MP4 files", "*.mp4"), ("AVI files", "*.avi")))
 
         if filename_path in ["", " "]:
             return False
 
-        print(filename_path)
+        # convert to mp4
+        mp4_video_path = config['VIDEO_PATHS']['mp4_video']
+        # mpy.VideoFileClip(filename_path).write_videofile(mp4_video_path)
 
-        return str(filename_path)
+        cap = cv2.VideoCapture(filename_path) # open the video
+
+        # Some characteristics from the original video # TODO delete
+        w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+        out = cv2.VideoWriter(mp4_video_path, 0x7634706d, fps, (w_frame, h_frame))
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if ret:
+                out.write(frame)
+            else:
+                break
+
+        # Release the VideoCapture and VideoWriter objects
+        cap.release()
+        out.release()
+
+        print(mp4_video_path)
+
+        return str(mp4_video_path)
 
     def cut_video(self, min, max):
-        clip = mpy.VideoFileClip(self.path)
-        clip = clip.subclip(min, max)
-        clip.write_videofile(config['VIDEO_PATHS']['cutted'])
-        return config['VIDEO_PATHS']['cutted']
+        # clip = mpy.VideoFileClip(self.path) # TODO delete
+        # clip = clip.subclip(min, max)
+        # clip.write_videofile(config['VIDEO_PATHS']['cutted'])
+        cap = cv2.VideoCapture(self.path) # open the video
+
+        # Some characteristics from the original video
+        w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        start_frame = int(min*fps)
+        end_frame = int(max*fps)
+        cutted_video_path = config['VIDEO_PATHS']['cutted']
+
+        # Define the codec and create VideoWriter object
+        out = cv2.VideoWriter(cutted_video_path, 0x7634706d, fps, (w_frame, h_frame))
+
+        # Read the video frame by frame
+        while cap.isOpened():
+            ret, frame = cap.read()
+
+            if ret:
+                # Write the frame to the output file if it is within the desired range
+                if cap.get(cv2.CAP_PROP_POS_FRAMES) >= start_frame and cap.get(cv2.CAP_PROP_POS_FRAMES) <= end_frame:
+                    out.write(frame)
+                # Break the loop if we have reached the end of the subvideo
+                if cap.get(cv2.CAP_PROP_POS_FRAMES) > end_frame:
+                    break
+            else:
+                break
+
+        # Release the VideoCapture and VideoWriter objects
+        cap.release()
+        out.release()
+
+        return cutted_video_path
 
     @staticmethod
     def rescaleFrame(frame, scale=0.5):
