@@ -29,7 +29,9 @@ class App(customtkinter.CTk):
 
     def __init__(self):
         super().__init__()
+        pre_routine() # create results folder
 
+        self.my_thread = ExecThread()
         self.title("Video Motion Synchrony Measurement")
         self.geometry(f"{App.width}x{App.height}")
         self.protocol("WM_DELETE_WINDOW", self.__on_closing)
@@ -82,7 +84,7 @@ class App(customtkinter.CTk):
 
         self.video_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.video_explore_image,
                                                          text="", width=30, height=30,
-                                                         compound="right", command=self.__video_btn_handler)
+                                                         compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__video_btn_handler)))
         self.video_explore_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
 
         # ============ frame_right ============
@@ -144,7 +146,7 @@ class App(customtkinter.CTk):
         self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=105,
                                                  fg_color='gray', hover_color='green', text="Start Analysis",
                                                  corner_radius=15, text_font=("Calibri Bold", -18),
-                                                 command=self.__start_btn_handler)
+                                                 command=(lambda:self.my_thread.thread_excecuter(self.__start_btn_handler)))
         self.start_btn.grid(row=7, column=0, columnspan=3, pady=10, padx=150, sticky="w")
 
     # set the shown float values in format .2f for the 'Percentage Deviation' slider
@@ -195,14 +197,12 @@ class App(customtkinter.CTk):
 
             self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
                                                           text="", width=30, height=30,
-                                                          compound="right", command=self.__report_btn_handler)
+                                                          compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__report_btn_handler)))
             self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
 
             # show to the user the synchronization rate
             # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
             # TODO: in the future, send the grade as is, without 'round' method (?)
-
-        pre_routine() # create results folder
 
         if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
             avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
@@ -253,7 +253,7 @@ class App(customtkinter.CTk):
 
         export_btn = customtkinter.CTkButton(master=self.export_popup, text="Export", width=70, height=40,
                                              fg_color='gray', hover_color='green',
-                                             compound="right", command=self.__export_handler)
+                                             compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__export_handler)))
         export_btn.grid(row=3, column=0, pady=10, padx=60)
 
         # pop the export window
@@ -308,7 +308,7 @@ class App(customtkinter.CTk):
 
             self.folder_btn = customtkinter.CTkButton(master=self.frame_left, image=folder_image,
                                                       text="", width=30, height=30,
-                                                      compound="left", command=self.__show_in_explorer_btn_handler)
+                                                      compound="left", command=(lambda:self.my_thread.thread_excecuter(self.__show_in_explorer_btn_handler)))
             self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
 
             # TODO: save an empty txt file
@@ -319,7 +319,7 @@ class App(customtkinter.CTk):
                 self.txt_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
                                                                   text="", width=30, height=30,
                                                                   compound="left",
-                                                                  command=self.__show_report_btn_handler)
+                                                                  command=(lambda:self.my_thread.thread_excecuter(self.__show_report_btn_handler)))
 
                 sticky = "n" if len(
                     selected_checkboxes) == 1 else "nw"  # appers in the middle if this report is the only one
@@ -337,7 +337,7 @@ class App(customtkinter.CTk):
                 self.pdf_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
                                                                   text="", width=30, height=30,
                                                                   compound="left",
-                                                                  command=self.__show_report_btn_handler)
+                                                                  command=(lambda:self.my_thread.thread_excecuter(self.__show_report_btn_handler)))
 
                 sticky = "n" if len(
                     selected_checkboxes) == 1 else "ne"  # appers in the middle if this report is the only one

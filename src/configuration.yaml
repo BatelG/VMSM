@@ -4,6 +4,7 @@ GUI:
     HEIGHT: 600
 
 VIDEO_PATHS:
+  mp4_video: results\\origin.mp4
   first_object: results\\1st_result.mp4
   first_object2: results\\1st_result2.mp4
   second_object: results\\2nd_result.mp4
