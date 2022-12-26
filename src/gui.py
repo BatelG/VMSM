@@ -1,5 +1,7 @@
 from tkinter import *
 import yaml
+import os
+import itertools
 from PIL import ImageTk, Image
 import customtkinter
 from customtkinter import CTkCheckBox
@@ -66,7 +68,7 @@ class App(customtkinter.CTk):
 
         # set the 'Video Loader' label and button
         self.video_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Video Loader",
-                                                text_font=("Calibri Bold", -20))  # font name and size in px
+                                                font=("Calibri Bold", -20))  # font name and size in px
         self.video_lbl.grid(row=1, column=0, pady=10, padx=10, sticky="n")
 
         # set the theme switcher
@@ -77,7 +79,7 @@ class App(customtkinter.CTk):
         self.Theme_switch.select()
 
         # set cutting video slider
-        self.video_slider_bg = self.Theme_switch.bg_color[1]
+        self.video_slider_bg = self.Theme_switch._bg_color[1]
         self.video_slider_line_s = '#4A4D50'
         self.video_slider_line = '#AAB0B5'
         self.add_video_slider()
@@ -108,7 +110,7 @@ class App(customtkinter.CTk):
 
         # set the 'Select ROIs' lables and checkboxes
         self.roi_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Select ROIs:",
-                                              text_font=("Calibri Bold", -20))
+                                              font=("Calibri Bold", -20))
         self.roi_lbl.grid(row=0, column=2, columnspan=1, pady=20, padx=10, sticky="n")
 
         # 'Right hand' choice
@@ -132,9 +134,12 @@ class App(customtkinter.CTk):
                                            variable=self.checkbox_var_pose, onvalue="on", offvalue="off")
         self.pose_roi_choice.grid(row=3, column=2, pady=10, padx=20, sticky="n")
 
+        # set progressbar
+        self.progressbar = customtkinter.CTkProgressBar(master=self.frame_right, mode="indeterminnate")
+
         # set the 'Percentage Deviation' label and values slider
         self.perc_dev_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Percentage Deviation:",
-                                                   text_font=("Calibri Bold", -20))
+                                                   font=("Calibri Bold", -20))
         self.perc_dev_lbl.grid(row=5, column=0, columnspan=2, pady=10, sticky="ns")
 
         self.slider = customtkinter.CTkSlider(master=self.frame_right, command=self.__prec_slider_handler,
@@ -145,24 +150,35 @@ class App(customtkinter.CTk):
         # set the 'Start Analysis' button
         self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=105,
                                                  fg_color='gray', hover_color='green', text="Start Analysis",
-                                                 corner_radius=15, text_font=("Calibri Bold", -18),
+                                                 corner_radius=15, font=("Calibri Bold", -18),
                                                  command=(lambda:self.my_thread.thread_excecuter(self.__start_btn_handler)))
-        self.start_btn.grid(row=7, column=0, columnspan=3, pady=10, padx=150, sticky="w")
+        self.start_btn.grid(row=8, column=0, columnspan=3, pady=10, padx=150, sticky="w")
+
+    def strat_progressbar(self):
+        self.progressbar.grid(row=5, column=2, padx=100, pady=10)
+        self.progressbar.start()
+
+    def stop_progressbar(self):
+        self.progressbar.grid_forget()
+        self.progressbar.stop()
 
     # set the shown float values in format .2f for the 'Percentage Deviation' slider
     def __prec_slider_handler(self, val):
-        self.perc_dev_lbl.set_text(f"Percentage Deviation: {round(val, 2)}")
+        self.perc_dev_lbl.configure(text=f"Percentage Deviation: {round(val, 2)}")
 
     # upload video and set the frame for it
     def __video_btn_handler(self):
+        self.strat_progressbar()
         video_frame = customtkinter.CTkFrame(self.frame_info)
         video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
         self.video = Video(video_frame)
         self.video_slider_max_val = int(mpy.VideoFileClip(self.video.path).duration)
         self.rs1.max_val = self.video_slider_max_val
         self.add_video_slider()
+        self.stop_progressbar()
 
     def __start_btn_handler(self):
+        self.strat_progressbar()
         time.sleep(1)
 
         rois_choices = [self.right_hand_roi_choice, self.left_hand_roi_choice, self.pose_roi_choice]
@@ -189,21 +205,6 @@ class App(customtkinter.CTk):
 
             self.__message(title, message, "ok")
 
-        else:
-            # add option to export the analysis result reports (set label and button)
-            self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
-                                                     text_font=("Calibri Bold", -20))  # font name and size in px
-            self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
-
-            self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
-                                                          text="", width=30, height=30,
-                                                          compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__report_btn_handler)))
-            self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
-
-            # show to the user the synchronization rate
-            # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
-            # TODO: in the future, send the grade as is, without 'round' method (?)
-
         if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
             avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
                     self.pose_roi_choice)
@@ -214,8 +215,8 @@ class App(customtkinter.CTk):
         sync_rate, padx, color = get_synchronization_rate(avg_distance, self.slider.get())
 
         # set the 'Synchronization Rate' label
-        self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, text_font=("Calibri Bold", -20))
-        self.sync_rate_lbl.grid(row=7, column=0, columnspan=3, pady=10, sticky="nw")
+        self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, font=("Calibri Bold", -20))
+        self.sync_rate_lbl.grid(row=7, column=0, columnspan=2, pady=10, sticky="n")
 
         # configure the right values, according to the grade
         self.sync_rate_lbl.configure(text=sync_rate, text_color=color)
@@ -225,12 +226,28 @@ class App(customtkinter.CTk):
         title = "Start Success"
         message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
 
+        # add option to export the analysis result reports (set label and button)
+        self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
+                                                font=("Calibri Bold", -20))  # font name and size in px
+        self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
+
+        self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
+                                                    text="", width=30, height=30,
+                                                    compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__report_btn_handler)))
+        self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
+
+        # show to the user the synchronization rate
+        # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
+        # TODO: in the future, send the grade as is, without 'round' method (?)
+
+        self.stop_progressbar()
         self.__message(title, message, "ok")
 
     # handler for pressing the 'Reports Producer' button
     def __report_btn_handler(self):
+        self.strat_progressbar()
         # set the window properties
-        self.export_popup = self.__new_popup("Export Results", 300, 200)
+        self.export_popup = self.__new_popup("Export Results", config['GUI']['EXPORT']['WIDTH'], config['GUI']['EXPORT']['WIDTH'])
 
         # export txt raw data choice
         checkbox_var_txt = IntVar(value=0)  # init checkbox
@@ -248,7 +265,7 @@ class App(customtkinter.CTk):
 
         # set export label and button
         select_type_lbl = customtkinter.CTkLabel(master=self.export_popup, text="Select File to Export:",
-                                                 text_color='black', text_font=("Calibri Bold", -20))
+                                                 text_color='black', font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=0, pady=10, padx=60)
 
         export_btn = customtkinter.CTkButton(master=self.export_popup, text="Export", width=70, height=40,
@@ -257,17 +274,19 @@ class App(customtkinter.CTk):
         export_btn.grid(row=3, column=0, pady=10, padx=60)
 
         # pop the export window
+        self.stop_progressbar()
         self.export_popup.mainloop()
 
     # handler for pressing the 'Export' button
     def __export_handler(self):
+        self.strat_progressbar()
         report_choices = [self.txt_choice, self.pdf_choice]
         selected_checkboxes = []
 
         # only the choices that are "on"
         for choice in report_choices:
             if choice.get() == "on":
-                selected_checkboxes.append(choice.text)
+                selected_checkboxes.append(choice._text)
 
         # at least one report type has to be selected
         if not selected_checkboxes:
@@ -286,9 +305,14 @@ class App(customtkinter.CTk):
             for choice in selected_checkboxes:
                 if choice == 'Raw Data':
                     for roi in rois:
-                        for roi_dictA, roi_dictB in zip(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
+                        for roi_dictA, roi_dictB in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
                             if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys())):
-                                np.savetxt(f'{path.get()}\\raw_data_{roi}.txt', pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index().values, fmt='%3d %.2f %.2f')
+                                df = pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index()
+                                df = df.rename(columns={'index': 'frame'})
+
+                                with open(f'{path.get()}\\raw_data_{roi}.txt', 'w', encoding='utf-8') as f:
+                                    dfAsString = df.to_string(header=True, index=False)
+                                    f.write(dfAsString)
                                 # TODO write to log that file was saved and the path
                 if choice == 'PDF Report':
                     pass
@@ -301,10 +325,10 @@ class App(customtkinter.CTk):
             image_size = 35
             folder_image = self.__load_image("file_explore.png", image_size, image_size)
 
-            # set the 'Open Report' label and the 'Show in File Explorer' button.
-            self.open_report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Open Report",
-                                                          text_font=("Calibri Bold", -20))  # font name and size in px
-            self.open_report_lbl.grid(row=5, column=0, pady=40, padx=10, sticky="n")
+            # set the 'Show in File Explorer' button and label.
+            self.folder_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Open in File Explorer",
+                                                          font=("Calibri Bold", -20))  # font name and size in px
+            self.folder_lbl.grid(row=5, column=0, pady=40, padx=10, sticky="n")
 
             self.folder_btn = customtkinter.CTkButton(master=self.frame_left, image=folder_image,
                                                       text="", width=30, height=30,
@@ -313,36 +337,12 @@ class App(customtkinter.CTk):
 
             # TODO: save an empty txt file
             if "on" == self.txt_choice.get():
-                report_image = self.__load_image("open_raw_data.jpg", image_size, image_size)
-
-                # set the 'Raw Data' label and the 'Open Raw Data' button
-                self.txt_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
-                                                                  text="", width=30, height=30,
-                                                                  compound="left",
-                                                                  command=(lambda:self.my_thread.thread_excecuter(self.__show_report_btn_handler)))
-
-                sticky = "n" if len(
-                    selected_checkboxes) == 1 else "nw"  # appers in the middle if this report is the only one
-                self.txt_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
-
                 file_cnt = file_cnt + 1
 
                 # save raw data txt file
 
             # TODO: save an empty pdf file
             if "on" == self.pdf_choice.get():
-                report_image = self.__load_image("open_report.jpg", image_size, image_size)
-
-                # set the 'Raw Data' label and the 'Open Report' button
-                self.pdf_file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=report_image,
-                                                                  text="", width=30, height=30,
-                                                                  compound="left",
-                                                                  command=(lambda:self.my_thread.thread_excecuter(self.__show_report_btn_handler)))
-
-                sticky = "n" if len(
-                    selected_checkboxes) == 1 else "ne"  # appers in the middle if this report is the only one
-                self.pdf_file_image_btn.grid(row=5, column=0, pady=90, padx=30, sticky=sticky)
-
                 file_cnt = file_cnt + 1
 
             # pop a success message
@@ -350,12 +350,14 @@ class App(customtkinter.CTk):
             sub_message = "The file was" if file_cnt == 1 else "The files were"
             message = f"{sub_message} downloaded successfully !\nTake a look :)"
 
+            self.stop_progressbar()
             self.__message(title, message, "ok")
+            self.export_popup.destroy()
 
     # handler for pressing the 'Show Report' button
-    def __show_report_btn_handler(self):
-        # TODO: open the file on the computer
-        self.destroy()
+    # def __show_report_btn_handler(self):
+    #     # TODO: open the file on the computer
+    #     self.destroy()
 
     # handler for pressing 'Show in File Explorer' button
     def __show_in_explorer_btn_handler(self):
@@ -368,17 +370,20 @@ class App(customtkinter.CTk):
 
     # load image as PhotoImage
     def __load_image(self, name, width, height):
-        image = ImageTk.PhotoImage(Image.open
-                                   (PATH + f"\\resources\\images\\{name}").resize((width, height),
-                                                                                  Image.Resampling.LANCZOS))
+        # image = ImageTk.PhotoImage(image=Image.open
+        #                            (PATH + f"\\resources\\images\\{name}").resize((width, height),
+        #                                                                           Image.Resampling.LANCZOS))
 
-        # PhotoImage object is garbage-collected by Python,
-        # so the image is cleared even if it’s being displayed by a Tkinter widget.
-        # To avoid this, the program must keep an extra reference to the image object.
-        lbl = Label(image=image)
-        lbl.image = image
+        # # PhotoImage object is garbage-collected by Python,
+        # # so the image is cleared even if it’s being displayed by a Tkinter widget.
+        # # To avoid this, the program must keep an extra reference to the image object.
+        # lbl = Label(image=image)
+        # lbl.image = image
 
-        return lbl.image
+        # return lbl.image
+        return customtkinter.CTkImage(light_image=Image.open(PATH + f"\\resources\\images\\{name}"),
+                                  dark_image=Image.open(PATH + f"\\resources\\images\\{name}"),
+                                  size=(width, height))
 
     # create new popup window and set it's properties
     def __new_popup(self, title, width, height):
@@ -392,11 +397,11 @@ class App(customtkinter.CTk):
     # pop a message window
     def __message(self, title, message, button):
         # set the window properties
-        msg_popup = self.__new_popup(title, 440, 130)
+        msg_popup = self.__new_popup(title, config['GUI']['POP_APP']['WIDTH'], config['GUI']['POP_APP']['HEIGHT'])
 
         # set the label and button
         select_type_lbl = customtkinter.CTkLabel(master=msg_popup, text=message,
-                                                 text_color='black', text_font=("Calibri Bold", -20))
+                                                 text_color='black', font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
 
         btn = customtkinter.CTkButton(master=msg_popup, text=button, width=70, height=40,
@@ -412,13 +417,13 @@ class App(customtkinter.CTk):
         if self.Theme_switch.get() == 1:
             customtkinter.set_appearance_mode("dark")
             self.Theme_switch.text = "Light Mode"
-            self.video_slider_bg = self.Theme_switch.bg_color[1]
+            self.video_slider_bg = self.Theme_switch._bg_color[1]
             self.video_slider_line_s = '#4A4D50'
             self.video_slider_line = '#AAB0B5'
         else:
             customtkinter.set_appearance_mode("light")
             self.Theme_switch.text = "Dark Mode"
-            self.video_slider_bg = self.Theme_switch.bg_color[0]
+            self.video_slider_bg = self.Theme_switch._bg_color[0]
             self.video_slider_line_s = '#AAB0B5'
             self.video_slider_line = '#4A4D50'
 
