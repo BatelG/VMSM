@@ -2,6 +2,7 @@ import os
 import shutil
 import moviepy
 import datetime
+import pathlib
 import shutil
 from threading import Thread
 import time
@@ -78,7 +79,7 @@ def get_c_mass(roi, lst_res):
 
 
 # calculate Euclidean distance between following pairs of frames within one object
-def _create_distance_chart(lst_df, object):
+def _create_distance_chart(lst_df, object_str):
     print(f"({datetime.datetime.now()}) *****_create_distance_chart*****")
 
     lst_of_dist_dict = []
@@ -100,7 +101,7 @@ def _create_distance_chart(lst_df, object):
                         number_of_illegal_frames += 1
                         if number_of_illegal_frames == config['VIDEO_PROCESSING']['ALLOW']['FOLLOWING_FRAMES_THRESHOLD']:
                             # TODO informed the user in case of missing information
-                            print(f'there is not enough data at roi: {key} object - {object}')
+                            print(f'there is not enough data at roi: {key} object - {object_str}')
                             data_flag = True
                             break
                         continue
@@ -120,19 +121,19 @@ def _create_distance_chart(lst_df, object):
                     continue
 
             if not data_flag:
-                lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['distance'])})
+                lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=[object_str])})
 
         for dict in lst_of_dist_dict:
             for key in dict.keys():
                 df = dict[key].reset_index()
                 df = df.rename(columns={'index': 'frame'})
                 try:
-                    df.plot(x='frame', y='distance', kind='line')
-                    plt.title(f'distance of roi {key} between following frames - {object}')
-                    plt.savefig(f'{RES_PATH}distance chart between following frames of roi {key} - {object}')
+                    df.plot(x='frame', y=object_str, kind='line')
+                    plt.title(f'distance of roi {key} between following frames - {object_str}')
+                    plt.savefig(f'{RES_PATH}distance chart between following frames of roi {key} - {object_str}')
                 except Exception:
                     # TODO informed the user in case of missing information
-                    print(f'there is not enough data at roi: {key} object - {object}')
+                    print(f'there is not enough data at roi: {key} object - {object_str}')
 
     return lst_of_dist_dict
 
@@ -388,33 +389,36 @@ class Video:
     def video_loader_btn_handler(self): # TODO: after debug is done, change initial dir to c folder
         filename_path = filedialog.askopenfilename(initialdir=PATH,
             title="Select a File",
-            filetypes=(("MOV files", "*.mov"), ("MP4 files", "*.mp4"), ("AVI files", "*.avi")))
+            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
 
         if filename_path in ["", " "]:
             return False
 
         # convert to mp4
-        mp4_video_path = config['VIDEO_PATHS']['mp4_video']
-        # mpy.VideoFileClip(filename_path).write_videofile(mp4_video_path)
+        if pathlib.Path(filename_path).suffix == ".mp4":
+            mp4_video_path = filename_path
+        else:
+            mp4_video_path = config['VIDEO_PATHS']['mp4_video']
+            # mpy.VideoFileClip(filename_path).write_videofile(mp4_video_path)
 
-        cap = cv2.VideoCapture(filename_path) # open the video
+            cap = cv2.VideoCapture(filename_path) # open the video
 
-        # Some characteristics from the original video # TODO delete
-        w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-        out = cv2.VideoWriter(mp4_video_path, 0x7634706d, fps, (w_frame, h_frame))
+            # Some characteristics from the original video # TODO delete
+            w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+            out = cv2.VideoWriter(mp4_video_path, 0x7634706d, fps, (w_frame, h_frame))
 
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if ret:
-                out.write(frame)
-            else:
-                break
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if ret:
+                    out.write(frame)
+                else:
+                    break
 
-        # Release the VideoCapture and VideoWriter objects
-        cap.release()
-        out.release()
+            # Release the VideoCapture and VideoWriter objects
+            cap.release()
+            out.release()
 
         print(mp4_video_path)
 
