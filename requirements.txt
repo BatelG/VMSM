@@ -7,3 +7,4 @@ pyyaml
 moviepy
 pandas
 RangeSlider
+fpdf

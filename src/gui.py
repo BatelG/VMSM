@@ -1,37 +1,39 @@
-from tkinter import *
-import yaml
 import os
+import glob
+import logging
+import subprocess
 import itertools
-from PIL import ImageTk, Image
+from tkinter import *
+import pandas as pd
+import moviepy.editor as mpy
+import yaml
+from fpdf import FPDF
+from PIL import Image
 import customtkinter
 from customtkinter import CTkCheckBox
+from RangeSlider.RangeSlider import RangeSliderH
 from .utils import *
-from RangeSlider.RangeSlider import RangeSliderH, RangeSliderV
-import moviepy.editor as mpy
-import pandas as pd
-import numpy as np
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 
+logger = logging.getLogger(__name__)
+
+
 with open(r'src\\configuration.yaml', 'r', encoding='utf-8') as c:
     config = yaml.safe_load(c)
 
 
-# TODO: think of all the cases where the data need to be reset for new data (e.g. new video)
-# TODO: save empty .txt and .pdf files
-# TODO: disable/unable labels/buttons
-
 class App(customtkinter.CTk):
     # sizes of the application
-    width = config['GUI']['APP']['WIDTH']
-    height = config['GUI']['APP']['HEIGHT']
+    width = config['gui']['app']['width']
+    height = config['gui']['app']['height']
 
     def __init__(self):
         super().__init__()
-        pre_routine() # create results folder
+        pre_routine()  # create results folder
 
         self.my_thread = ExecThread()
         self.title("Video Motion Synchrony Measurement")
@@ -237,9 +239,6 @@ class App(customtkinter.CTk):
         self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
 
         # show to the user the synchronization rate
-        # TODO: get the actual calculated grade, instead of the 'Percentage Deviation' value!
-        # TODO: in the future, send the grade as is, without 'round' method (?)
-
         self.stop_progressbar()
         self.__message(title, message, "ok")
 
@@ -247,21 +246,28 @@ class App(customtkinter.CTk):
     def __report_btn_handler(self):
         self.strat_progressbar()
         # set the window properties
-        self.export_popup = self.__new_popup("Export Results", config['GUI']['EXPORT']['WIDTH'], config['GUI']['EXPORT']['WIDTH'])
+        self.export_popup = self.__new_popup("Export Results", config['gui']['export']['width'], config['gui']['export']['height'])
 
         # export txt raw data choice
         checkbox_var_txt = IntVar(value=0)  # init checkbox
-        self.txt_choice = CTkCheckBox(master=self.export_popup, text="Raw Data", text_color='black',
+        self.txt_choice = CTkCheckBox(master=self.export_popup, text="TXT Raw Data", text_color='black',
                                       command=self.__toggle_state(checkbox_var_txt),
                                       variable=checkbox_var_txt, onvalue="on", offvalue="off")
         self.txt_choice.grid(row=1, column=0, pady=10, padx=60)
+
+        # export csv raw data choice
+        checkbox_var_csv = IntVar(value=0)  # init checkbox
+        self.csv_choice = CTkCheckBox(master=self.export_popup, text="CSV Raw Data", text_color='black',
+                                      command=self.__toggle_state(checkbox_var_csv),
+                                      variable=checkbox_var_csv, onvalue="on", offvalue="off")
+        self.csv_choice.grid(row=2, column=0, pady=10, padx=60)
 
         # export pdf report choice
         checkbox_var_pdf = IntVar(value=0)  # init checkbox
         self.pdf_choice = CTkCheckBox(master=self.export_popup, text="PDF Report", text_color='black',
                                       command=self.__toggle_state(checkbox_var_pdf),
                                       variable=checkbox_var_pdf, onvalue="on", offvalue="off")
-        self.pdf_choice.grid(row=2, column=0, pady=10, padx=60)
+        self.pdf_choice.grid(row=3, column=0, pady=10, padx=60)
 
         # set export label and button
         select_type_lbl = customtkinter.CTkLabel(master=self.export_popup, text="Select File to Export:",
@@ -271,7 +277,7 @@ class App(customtkinter.CTk):
         export_btn = customtkinter.CTkButton(master=self.export_popup, text="Export", width=70, height=40,
                                              fg_color='gray', hover_color='green',
                                              compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__export_handler)))
-        export_btn.grid(row=3, column=0, pady=10, padx=60)
+        export_btn.grid(row=4, column=0, pady=10, padx=60)
 
         # pop the export window
         self.stop_progressbar()
@@ -280,7 +286,7 @@ class App(customtkinter.CTk):
     # handler for pressing the 'Export' button
     def __export_handler(self):
         self.strat_progressbar()
-        report_choices = [self.txt_choice, self.pdf_choice]
+        report_choices = [self.txt_choice, self.csv_choice, self.pdf_choice]
         selected_checkboxes = []
 
         # only the choices that are "on"
@@ -296,32 +302,66 @@ class App(customtkinter.CTk):
 
             self.__message(title, message, "ok")
         else:
+            file_cnt = 0  # determines the message of the file saved popup
+
             # open file dialog to get the diractory to sace the report
-            path = StringVar()
+            self.export_path = StringVar()
             folder_path = filedialog.askdirectory()
-            path.set(folder_path)
+            self.export_path.set(folder_path)
             rois = ['right_hand', 'left_hand', 'pose']
 
             for choice in selected_checkboxes:
-                if choice == 'Raw Data':
+                if choice == 'TXT Raw Data':
+                    file_cnt = file_cnt + 1
+                    logger.info("Creating TXT raw data reports")
+
                     for roi in rois:
                         for roi_dictA, roi_dictB in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
                             if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys())):
                                 df = pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index()
                                 df = df.rename(columns={'index': 'frame'})
+                                file_path = f'{self.export_path.get()}\\raw_data_{roi}.txt'
 
-                                with open(f'{path.get()}\\raw_data_{roi}.txt', 'w', encoding='utf-8') as f:
+                                with open(file_path, 'w', encoding='utf-8') as f:
                                     dfAsString = df.to_string(header=True, index=False)
                                     f.write(dfAsString)
-                                # TODO write to log that file was saved and the path
+                                    logger.info(f"'{file_path}' was saved successfully!")
+
                 if choice == 'PDF Report':
-                    pass
-                # TODO if choice == 'CSV Report':
-                    #df.to_csv('raw_data_csv.csv')
+                    # check if charts were created
+                    # path = f"{config['video_paths']['res']}{*.png}"
+                    imagelist = glob.glob(f"{config['video_paths']['res']}*.png")
+                    if not imagelist:
+                        return
 
-            file_cnt = 0  # determines the message of the file saved popup
+                    file_cnt = file_cnt + 1
+                    logger.info("Creating PDF report")
+                    pdf = FPDF()
 
-            # load image
+                    # imagelist is the list with all image filenames
+                    for image in imagelist:
+                        pdf.add_page()
+                        pdf.image(image, 0, 0, 210, 297)  # A4
+
+                    file_path = f"{self.export_path.get()}\\{config['gui']['export']['pdf']['name']}" 
+                    pdf.output(file_path, "F")
+                    logger.info(f"'{file_path}' was saved successfully!")
+
+                if choice == 'CSV Raw Data':
+                    file_cnt = file_cnt + 1
+                    logger.info("Creating CSV raw data reports")
+
+                    for roi in rois:
+                        for roi_dictA, roi_dictB in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
+                            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys())):
+                                df = pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index()
+                                df = df.rename(columns={'index': 'Frame'})
+                                file_path = f'{self.export_path.get()}\\raw_data_{roi}.csv'
+
+                                df.to_csv(file_path, index=False)
+                                logger.info(f"'{file_path}' was saved successfully!")
+
+            # load image for 'Show in File Explorer' button
             image_size = 35
             folder_image = self.__load_image("file_explore.png", image_size, image_size)
 
@@ -335,16 +375,6 @@ class App(customtkinter.CTk):
                                                       compound="left", command=(lambda:self.my_thread.thread_excecuter(self.__show_in_explorer_btn_handler)))
             self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
 
-            # TODO: save an empty txt file
-            if "on" == self.txt_choice.get():
-                file_cnt = file_cnt + 1
-
-                # save raw data txt file
-
-            # TODO: save an empty pdf file
-            if "on" == self.pdf_choice.get():
-                file_cnt = file_cnt + 1
-
             # pop a success message
             title = "Export Success"
             sub_message = "The file was" if file_cnt == 1 else "The files were"
@@ -354,33 +384,16 @@ class App(customtkinter.CTk):
             self.__message(title, message, "ok")
             self.export_popup.destroy()
 
-    # handler for pressing the 'Show Report' button
-    # def __show_report_btn_handler(self):
-    #     # TODO: open the file on the computer
-    #     self.destroy()
-
     # handler for pressing 'Show in File Explorer' button
     def __show_in_explorer_btn_handler(self):
-        # TODO: show the downloaded file in the file explorer
-        self.destroy()
+        subprocess.run(['explorer', os.path.realpath(self.export_path.get())], check=False)
 
     # set the check box's initial state
     def __toggle_state(self, var):
         var.set(1 - var.get())
 
-    # load image as PhotoImage
+    # load image as Image
     def __load_image(self, name, width, height):
-        # image = ImageTk.PhotoImage(image=Image.open
-        #                            (PATH + f"\\resources\\images\\{name}").resize((width, height),
-        #                                                                           Image.Resampling.LANCZOS))
-
-        # # PhotoImage object is garbage-collected by Python,
-        # # so the image is cleared even if it’s being displayed by a Tkinter widget.
-        # # To avoid this, the program must keep an extra reference to the image object.
-        # lbl = Label(image=image)
-        # lbl.image = image
-
-        # return lbl.image
         return customtkinter.CTkImage(light_image=Image.open(PATH + f"\\resources\\images\\{name}"),
                                   dark_image=Image.open(PATH + f"\\resources\\images\\{name}"),
                                   size=(width, height))
@@ -397,7 +410,7 @@ class App(customtkinter.CTk):
     # pop a message window
     def __message(self, title, message, button):
         # set the window properties
-        msg_popup = self.__new_popup(title, config['GUI']['POP_APP']['WIDTH'], config['GUI']['POP_APP']['HEIGHT'])
+        msg_popup = self.__new_popup(title, config['gui']['pop_app']['width'], config['gui']['pop_app']['height'])
 
         # set the label and button
         select_type_lbl = customtkinter.CTkLabel(master=msg_popup, text=message,
@@ -439,7 +452,7 @@ class App(customtkinter.CTk):
         self.rs1.grid(row=4, column=0, padx=10, pady=10)
 
     # handler for closing the main frame
-    def __on_closing(self, event=0):
+    def __on_closing(self):
         self.destroy()
         post_routine() # delete results folder
 
