@@ -1,23 +1,26 @@
-GUI:
-  APP:
-    WIDTH: 850
-    HEIGHT: 600
-  POP_APP:
-    WIDTH: 740
-    HEIGHT: 130
-  EXPORT:
-    WIDTH: 400
-    HEIGHT: 300
-VIDEO_PATHS:
-  mp4_video: results\\origin.mp4
-  first_object: results\\1st_result.mp4
-  first_object2: results\\1st_result2.mp4
-  second_object: results\\2nd_result.mp4
-  second_object2: results\\2nd_result2.mp4
-  mid_res: results\\middle_result.mp4
-  res: results\\
-  cutted: results\\cutted.mp4
-
-VIDEO_PROCESSING:
-  ALLOW:
-    FOLLOWING_FRAMES_THRESHOLD: 100
+logger:
+  name: vmsm.log
+gui:
+  app:
+    width: 850
+    height: 600
+  pop_app:
+    width: 740
+    height: 200
+  export:
+    width: 400
+    height: 400
+    pdf:
+      name: results.pdf
+video_paths:
+  mp4_video: 'results\\origin.mp4'
+  first_object: 'results\\1st_result.mp4'
+  first_object2: 'results\\1st_result2.mp4'
+  second_object: 'results\\2nd_result.mp4'
+  second_object2: 'results\\2nd_result2.mp4'
+  mid_res: 'results\\middle_result.mp4'
+  res: 'results\\'
+  cutted: 'results\\cutted.mp4'
+video_processing:
+  allow:
+    following_frames_treshold: 100

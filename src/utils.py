@@ -1,9 +1,7 @@
 import os
+import logging
 import shutil
-import moviepy
-import datetime
 import pathlib
-import shutil
 from threading import Thread
 import time
 import sys
@@ -17,6 +15,7 @@ import cv2
 import mediapipe as mp
 import yaml
 import moviepy.editor as mpy
+import moviepy
 
 
 with open(r'src\\configuration.yaml', 'r', encoding='utf-8') as c:
@@ -24,11 +23,12 @@ with open(r'src\\configuration.yaml', 'r', encoding='utf-8') as c:
 
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-RES_PATH = config['VIDEO_PATHS']['res']
-
+RES_PATH = config['video_paths']['res']
+logging.basicConfig(filename=config['logger']['name'], filemode='w', level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
+logger = logging.getLogger(__name__)
 
 def pre_routine():
-    print(f"({datetime.datetime.now()}) *****pre_routine*****")
+    logger.info("*****pre_routine*****")
 
     if os.path.exists(RES_PATH):
         shutil.rmtree(RES_PATH)
@@ -37,7 +37,7 @@ def pre_routine():
         os.mkdir(RES_PATH)
 
 def post_routine():
-    print(f"({datetime.datetime.now()}) *****post_routine*****")
+    logger.info("*****post_routine*****")
 
     if os.path.exists(RES_PATH) and os.path.isdir(RES_PATH):
         shutil.rmtree(RES_PATH)
@@ -52,12 +52,12 @@ def post_routine():
 #         popup.geometry(f"{width}x{height}")
 
 def get_c_mass(roi, lst_res):
-    print(f"({datetime.datetime.now()}) *****get_c_mass*****")
+    logger.info("*****get_c_mass*****")
 
     c_mass_x, c_mass_y, x_sum, y_sum, cnt = 0, 0, 0, 0, 0
     lst_vals = []
     try:
-        for result in lst_res:
+        for result in lst_res:  # result is unused variable but necessary one!
             if eval(f'result.{roi}_landmarks') is None:
                 lst_vals.append([0, 0])
             else:
@@ -80,28 +80,28 @@ def get_c_mass(roi, lst_res):
 
 # calculate Euclidean distance between following pairs of frames within one object
 def _create_distance_chart(lst_df, object_str):
-    print(f"({datetime.datetime.now()}) *****_create_distance_chart*****")
+    logger.info("*****_create_distance_chart*****")
 
     lst_of_dist_dict = []
-    for index, dict_of_df in enumerate(lst_df):
+    for _, dict_of_df in enumerate(lst_df):
         for key in dict_of_df.keys():
-            ax_df = lst_df[index][key]['c_mass_x']
-            ay_df = lst_df[index][key]['c_mass_y']
+            ax_df = dict_of_df[key]['c_mass_x']
+            ay_df = dict_of_df[key]['c_mass_y']
 
             number_of_illegal_frames = 0
             data_flag = False
             lst_vals = []
 
-            for idx, val in enumerate(ax_df):
+            for idx, _ in enumerate(ax_df):
                 try:
                     if idx == len(ax_df) - 1:
                         break
-                    # Only frames where both objects were detected are counted
+                    # only frames where both objects were detected are counted
                     if (ax_df[idx] == 0 or ay_df[idx] == 0) and (ax_df[idx+1] == 0 or ay_df[idx+1] == 0):
                         number_of_illegal_frames += 1
-                        if number_of_illegal_frames == config['VIDEO_PROCESSING']['ALLOW']['FOLLOWING_FRAMES_THRESHOLD']:
-                            # TODO informed the user in case of missing information
-                            print(f'there is not enough data at roi: {key} object - {object_str}')
+                        if number_of_illegal_frames == config['video_processing']['allow']['following_frames_treshold']:
+                            # TODO inform the user in case of missing information (?)
+                            logger.info(f'there is not enough data at roi: {key} object - {object_str}')
                             data_flag = True
                             break
                         continue
@@ -123,23 +123,23 @@ def _create_distance_chart(lst_df, object_str):
             if not data_flag:
                 lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=[object_str])})
 
-        for dict in lst_of_dist_dict:
-            for key in dict.keys():
-                df = dict[key].reset_index()
+        for dist_dict in lst_of_dist_dict:
+            for key in dist_dict.keys():
+                df = dist_dict[key].reset_index()
                 df = df.rename(columns={'index': 'frame'})
                 try:
                     df.plot(x='frame', y=object_str, kind='line')
                     plt.title(f'distance of roi {key} between following frames - {object_str}')
                     plt.savefig(f'{RES_PATH}distance chart between following frames of roi {key} - {object_str}')
                 except Exception:
-                    # TODO informed the user in case of missing information
-                    print(f'there is not enough data at roi: {key} object - {object_str}')
+                    # TODO inform the user in case of missing information (?)
+                    logger.info(f'there is not enough data at roi: {key} object - {object_str}')
 
     return lst_of_dist_dict
 
 # calculate Euclidean distance between two objects
 def create_distance_chart(lst_df, lst_df2):
-    print(f"({datetime.datetime.now()}) *****create_distance_chart*****")
+    logger.info("*****create_distance_chart*****")
 
     if lst_df2.__class__ is str:
         return _create_distance_chart(lst_df, lst_df2)
@@ -148,8 +148,8 @@ def create_distance_chart(lst_df, lst_df2):
     lst_of_dist_dict = []
     for index, dic_of_df in enumerate(lst_df):
         for key in dic_of_df.keys():
-            ax_df = lst_df[index][key]['c_mass_x']
-            ay_df = lst_df[index][key]['c_mass_y']
+            ax_df = dic_of_df[key]['c_mass_x']
+            ay_df = dic_of_df[key]['c_mass_y']
 
             bx_df = lst_df2[index][key]['c_mass_x']
             by_df = lst_df2[index][key]['c_mass_y']
@@ -157,9 +157,9 @@ def create_distance_chart(lst_df, lst_df2):
             number_of_illegal_frames = 0
             lst_vals = []
 
-            for idx, val in enumerate(ax_df):
+            for idx, _ in enumerate(ax_df):
                 try:
-                    # Only frames where both objects were detected are counted
+                    # only frames where both objects were detected are counted
                     if ax_df[idx] == 0 or bx_df[idx] == 0 or ay_df[idx] == 0 or by_df[idx] == 0:
                         number_of_illegal_frames += 1
                         continue
@@ -180,43 +180,44 @@ def create_distance_chart(lst_df, lst_df2):
             lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['distance'])})
             illegal_frames.append({key: number_of_illegal_frames})
 
-        for dict in lst_of_dist_dict:
-            for key in dict.keys():
-                df = dict[key].reset_index()
+        for dist_dict in lst_of_dist_dict:
+            for key in dist_dict.keys():
+                df = dist_dict[key].reset_index()
                 df = df.rename(columns={'index': 'frame'})
                 try:
                     df.plot(x='frame', y='distance', kind='line')
                     plt.title(f'distance of roi {key} between the two objects')
                     plt.savefig(f'{RES_PATH}distance chart between the objects of roi {key}')
                 except Exception:
-                    # TODO informed the user in case of missing information
-                    print(f'there is not enough data at roi: {key} between the objects')
+                    # TODO inform the user in case of missing information (?)
+                    logger.info(f'there is not enough data at roi: {key} between the objects')
 
     return lst_of_dist_dict
 
 
 def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice, path):
-    print(f"({datetime.datetime.now()}) *****get_df*****")
+    logger.info("*****get_df*****")
 
-    mp_drawing = mp.solutions.drawing_utils  # set up MediaPipe
     mp_holistic = mp.solutions.holistic  # set up holistic module
     cap = cv2.VideoCapture(path)  # import video from file
-    # Initiate holistic model
+    # initiate holistic model
     lst_res = []
     lst_df = []
-    with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-        cnt = 0
-        while cap.isOpened():
-            ret, frame = cap.read()
 
-            # Recolor Feed
+    with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+        while cap.isOpened():
+            _, frame = cap.read()
+
+            # recolor feed
             if frame is None:
                 break
+
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # resized frame
 
-            # Make Detections
+            # make detections
             results = holistic.process(image)
             lst_res.append(results)
+
     if len(lst_res) == 0:
         raise Exception('MediaPipe is not working properly')
 
@@ -236,94 +237,89 @@ def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pos
 
 def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
                 pose_roi_choice):
-    print(f"({datetime.datetime.now()}) *****get_synchronization*****")
+    logger.info("*****get_synchronization*****")
 
     # *** The following actions are happening after user press "Start" button ***
 
-    # TODO change the video path in case of cutting function has been selected
-    # from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
-    # ffmpeg_extract_subclip("video1.mp4", start_time, end_time, targetname="test.mp4")
-
     # crop the first object from the video
-    minX, maxX = Video.detect_object(video_path, config['VIDEO_PATHS']['first_object'])
+    minX, maxX = Video.detect_object(video_path, config['video_paths']['first_object'])
 
     # find the other object
-    # x_0_ratio, y_0_ratio, deltaX, deltaY
+
     # if maxX > 0.5:
-    #     Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+    #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
     # if minX > 0.5:
-    #     Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+    #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
+
     if minX > 0.25 and minX > 0.75:
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
     elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
     #####
     elif minX > 0.33 and minX > 0.77:
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
     elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
     #####
     elif maxX > 0.5 and minX > 0.5:
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], 0, 0, minX, 1) # left
+        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
     elif (maxX < 0.5 and minX < 0.5) or (maxX > 0.5 and minX < 0.5):
-        Video.crop_video(video_path, config['VIDEO_PATHS']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
 
     # crop the second object from remain video
-    Video.detect_object(config['VIDEO_PATHS']['mid_res'], config['VIDEO_PATHS']['second_object'])
+    Video.detect_object(config['video_paths']['mid_res'], config['video_paths']['second_object'])
 
     # getting the dimension of the videos
-    vid = cv2.VideoCapture(config['VIDEO_PATHS']['first_object'])
+    vid = cv2.VideoCapture(config['video_paths']['first_object'])
     height1 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width1 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-    vid = cv2.VideoCapture(config['VIDEO_PATHS']['second_object'])
+    vid = cv2.VideoCapture(config['video_paths']['second_object'])
     height2 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width2 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-    print("before transformations:")
-    print(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
+    logger.info("before transformations:")
+    logger.info(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
 
-    print('start to do transformations...')
+    logger.info('start to do transformations...')
 
     # compare between the 2 object dimension, the bigger one pass an resize + scaling transformations
     if width1 + height1 >= width2 + height2:
         new_h = int(height2)
         new_w = int(width2)
-        new_path = config['VIDEO_PATHS']['first_object2']
-        path = config['VIDEO_PATHS']['first_object']
+        new_path = config['video_paths']['first_object2']
+        path = config['video_paths']['first_object']
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
         clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
         clip_resized_mirrored.write_videofile(new_path)
 
-        vid1 = cv2.VideoCapture(config['VIDEO_PATHS']['second_object'])
+        vid1 = cv2.VideoCapture(config['video_paths']['second_object'])
         height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
         width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     else:
         new_h = int(height1)
         new_w = int(width1)
-        path = config['VIDEO_PATHS']['second_object']
-        new_path = config['VIDEO_PATHS']['second_object2']
+        path = config['video_paths']['second_object']
+        new_path = config['video_paths']['second_object2']
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
         clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
         clip_resized_mirrored.write_videofile(new_path)
 
-        vid1 = cv2.VideoCapture(config['VIDEO_PATHS']['first_object'])
+        vid1 = cv2.VideoCapture(config['video_paths']['first_object'])
         height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
         width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
-
-    # TODO remove the check lines
 
     vid2 = cv2.VideoCapture(new_path)
     height2 = vid2.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width2 = vid2.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-    print("after transformations:")
-    print(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
+    logger.info("after transformations:")
+    logger.info(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
 
     ###############################################################
 
@@ -331,7 +327,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
                     pose_roi_choice, new_path)
 
     lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
-                        pose_roi_choice, config['VIDEO_PATHS']['first_object'])
+                        pose_roi_choice, config['video_paths']['first_object'])
 
     lst_of_dist_dict_between_objects = create_distance_chart(lst_df, lst_df2)
     lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Object A')
@@ -346,12 +342,12 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
 
     rate = (sum(lst_avg)/len(lst_avg)) if len(lst_avg) > 0 else 1
 
-    return rate, lst_of_dist_dict_between_objects, lst_of_dist_dict_objectA, lst_of_dist_dict_objectB # avarage distance of all rois
+    return rate, lst_of_dist_dict_between_objects, lst_of_dist_dict_objectA, lst_of_dist_dict_objectB  # avarage distance of all rois
 
 
 # get the synchronization rate and label configuration values, according to the grade
 def get_synchronization_rate(nd, pd):
-    print(f"({datetime.datetime.now()}) *****get_synchronization_rate*****")
+    logger.info("*****get_synchronization_rate*****")
 
     if nd >= pd:
         grade = max(1-nd, 1-nd+pd)
@@ -361,12 +357,11 @@ def get_synchronization_rate(nd, pd):
     # the second value in 'range' method doesn't count
     if 0 <= grade <= 0.33:
         return "Weak Synchronization", 100, '#FF3200'
-    elif 0.34 <= grade <= 0.66:
+    if 0.34 <= grade <= 0.66:
         return "Medium Synchronization", 92, '#FF9B00'
-    elif 0.67 <= grade <= 0.95:
+    if 0.67 <= grade <= 0.95:
         return "Strong Synchronization", 88, '#C2C000'
-    else: # 0.96 <= grade <= 1
-        return "Perfect Synchronization", 88, '#359C25'
+    return "Perfect Synchronization", 88, '#359C25'  # 0.96 <= grade <= 1
 
 
 class ExecThread:
@@ -386,7 +381,7 @@ class Video:
             player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             player.play()
 
-    def video_loader_btn_handler(self): # TODO: after debug is done, change initial dir to c folder
+    def video_loader_btn_handler(self):  # TODO: after debug is done, change initial dir to c folder (?)
         filename_path = filedialog.askopenfilename(initialdir=PATH,
             title="Select a File",
             filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
@@ -394,19 +389,16 @@ class Video:
         if filename_path in ["", " "]:
             return False
 
-        # convert to mp4
         if pathlib.Path(filename_path).suffix == ".mp4":
             mp4_video_path = filename_path
-        else:
-            mp4_video_path = config['VIDEO_PATHS']['mp4_video']
-            # mpy.VideoFileClip(filename_path).write_videofile(mp4_video_path)
-
+        else:  # convert to mp4
+            logger.info(f"Convert '{filename_path}' into mp4 file")
+            mp4_video_path = config['video_paths']['mp4_video']
             cap = cv2.VideoCapture(filename_path) # open the video
 
-            # Some characteristics from the original video # TODO delete
+            # some characteristics from the original video
             w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
-            # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+            fps, _ = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
             out = cv2.VideoWriter(mp4_video_path, 0x7634706d, fps, (w_frame, h_frame))
 
             while cap.isOpened():
@@ -416,45 +408,42 @@ class Video:
                 else:
                     break
 
-            # Release the VideoCapture and VideoWriter objects
+            # release the VideoCapture and VideoWriter objects
             cap.release()
             out.release()
 
-        print(mp4_video_path)
+        logger.info(f"Loaded video path: {mp4_video_path}")
 
         return str(mp4_video_path)
 
-    def cut_video(self, min, max):
-        # clip = mpy.VideoFileClip(self.path) # TODO delete
-        # clip = clip.subclip(min, max)
-        # clip.write_videofile(config['VIDEO_PATHS']['cutted'])
+    def cut_video(self, start, end):
         cap = cv2.VideoCapture(self.path) # open the video
 
-        # Some characteristics from the original video
+        # some characteristics from the original video
         w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        start_frame = int(min*fps)
-        end_frame = int(max*fps)
-        cutted_video_path = config['VIDEO_PATHS']['cutted']
+        fps, _ = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        start_frame = int(start*fps)
+        end_frame = int(end*fps)
+        cutted_video_path = config['video_paths']['cutted']
 
-        # Define the codec and create VideoWriter object
+        # define the codec and create VideoWriter object
         out = cv2.VideoWriter(cutted_video_path, 0x7634706d, fps, (w_frame, h_frame))
 
-        # Read the video frame by frame
+        # read the video frame by frame
         while cap.isOpened():
             ret, frame = cap.read()
 
             if ret:
-                # Write the frame to the output file if it is within the desired range
+                # write the frame to the output file if it is within the desired range
                 if cap.get(cv2.CAP_PROP_POS_FRAMES) >= start_frame and cap.get(cv2.CAP_PROP_POS_FRAMES) <= end_frame:
                     out.write(frame)
-                # Break the loop if we have reached the end of the subvideo
+                # break the loop if we have reached the end of the subvideo
                 if cap.get(cv2.CAP_PROP_POS_FRAMES) > end_frame:
                     break
             else:
                 break
 
-        # Release the VideoCapture and VideoWriter objects
+        # release the VideoCapture and VideoWriter objects
         cap.release()
         out.release()
 
@@ -482,7 +471,7 @@ class Video:
 
         cap = cv2.VideoCapture(video_path)  # import video from file
 
-        # Initialize min/max default values
+        # initialize min/max default values
         maxSize = sys.maxsize
         minSize = -sys.maxsize - 1
         minX = maxSize
@@ -490,12 +479,12 @@ class Video:
         minY = maxSize
         maxY = minSize
 
-        # Initiate holistic model
+        # initiate holistic model
         with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
             cnt = 0  # indicates the frame number
 
             while cap.isOpened():
-                ret, frame = cap.read()  # ret is unused but necessary due cap.read() return a tuple
+                _, frame = cap.read()
 
                 if frame is None:
                     break
@@ -506,9 +495,9 @@ class Video:
 
                 if not results.pose_landmarks:
                     break
-                print(results.pose_landmarks.landmark)  # print coordinates
+                logger.info(results.pose_landmarks.landmark)  # write coordinates to log
 
-                # Loop on landmarks set for finding min,max of (x,y)
+                # loop on landmarks set for finding min,max of (x,y)
                 for land_mark in results.pose_landmarks.landmark:
                     if minX > land_mark.x > 0:
                         minX = land_mark.x
@@ -532,29 +521,28 @@ class Video:
 
                 cnt += 1
 
-        print("Result:")
-        print('minX = ', minX)
-        print('maxX = ', maxX)
-        print("##############")
-        print('minY = ', minY)
-        print('maxY = ', maxY)
+        logger.info("Result:")
+        logger.info(f"minX = {minX}")
+        logger.info(f"maxX = {maxX}")
+        logger.info("##############")
+        logger.info(f"minY = {minY}")
+        logger.info(f"maxY = {maxY}")
 
-        print("############################################")
+        logger.info("############################################")
 
-        print("Delta calculations..")
+        logger.info("Delta calculations..")
         deltaX = maxX - minX
         deltaY = maxY - minY
 
-        print(f'(x_0,y_0) = ({minX},{minY})')
-        print('deltaX = ', deltaX)
-        print('deltaY = ', deltaY)
-        print(
-            f'(minX+deltaX,minY+deltaY) = ({minX}+{deltaX},{minY}+{deltaY}) = ({minX + deltaX},{minY + deltaY})')
+        logger.info(f'(x_0,y_0) = ({minX},{minY})')
+        logger.info(f"deltaX = {deltaX}")
+        logger.info(f"deltaY = {deltaY}")
+        logger.info(f'(minX+deltaX,minY+deltaY) = ({minX}+{deltaX},{minY}+{deltaY}) = ({minX + deltaX},{minY + deltaY})')
 
         cap.release()
         cv2.destroyAllWindows()
 
-        print("crop video file...")
+        logger.info("crop video file...")
 
         Video.crop_video(video_path, output, minX, minY, deltaX, deltaY)
         return minX, maxX
@@ -564,37 +552,34 @@ class Video:
         cap = cv2.VideoCapture(video_path)  # open the video
         cnt = 0  # initialize frame counter
 
-        # Some characteristics from the original video
+        # some characteristics from the original video
         w_frame, h_frame = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps, frames = cap.get(cv2.CAP_PROP_FPS), cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
-        # Calculate the original (x_0,y_0) coordinates of the frame
+        # calculate the original (x_0,y_0) coordinates of the frame
         x_0 = int(x_0_ratio * w_frame)
         y_0 = int(y_0_ratio * h_frame)
 
         # width and height if the cropped frame
         w_frame_crop = int(deltaX * w_frame)
         h_frame_crop = int(deltaY * h_frame)
-
-        # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
         out = cv2.VideoWriter(output, 0x7634706d, fps, (w_frame_crop, h_frame_crop))
 
         while cap.isOpened():
             ret, frame = cap.read()
             frame = Video.rescaleFrame(frame, scale=1)
-
             cnt += 1  # counting frames
 
             # avoid problems when video finish
             if ret:
                 crop_frame = frame[y_0:y_0 + h_frame_crop, x_0:x_0 + w_frame_crop]
 
-                print(
+                logger.info(
                     f'making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
 
                 # show progress in percentage
                 xx = cnt * 100 / frames
-                print(int(xx), '%\n')
+                logger.info(int(xx), '%\n')
 
                 out.write(crop_frame)  # save the new video
 

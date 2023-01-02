@@ -1,5 +1,4 @@
 from src.gui import App
-from src.utils import *
 
 
 def main():
