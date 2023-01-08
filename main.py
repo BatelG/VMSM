@@ -2,8 +2,7 @@ from src.gui import App
 
 
 def main():
-    app = App()
-    app.start()
+    App()
 
 
 if __name__ == "__main__":
