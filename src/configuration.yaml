@@ -4,7 +4,7 @@ gui:
   app:
     width: 850
     height: 600
-  pop_app:
+  popup:
     width: 740
     height: 200
   export:

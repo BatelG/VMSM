@@ -1,8 +1,8 @@
 import os
 import glob
 import logging
-import subprocess
 import itertools
+import subprocess
 from tkinter import *
 import pandas as pd
 import moviepy.editor as mpy
@@ -16,7 +16,7 @@ from .utils import *
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-0blue"
 
 
 logger = logging.getLogger(__name__)
@@ -26,32 +26,35 @@ with open(r'src\\configuration.yaml', 'r', encoding='utf-8') as c:
     config = yaml.safe_load(c)
 
 
-class App(customtkinter.CTk):
+class App():
     # sizes of the application
     width = config['gui']['app']['width']
     height = config['gui']['app']['height']
 
     def __init__(self):
-        super().__init__()
+        self.create_vmsm()
+
+    def create_vmsm(self):
         pre_routine()  # create results folder
 
+        self.main_window = customtkinter.CTk()
         self.my_thread = ExecThread()
-        self.title("Video Motion Synchrony Measurement")
-        self.geometry(f"{App.width}x{App.height}")
-        self.protocol("WM_DELETE_WINDOW", self.__on_closing)
+        self.main_window.title("Video Motion Synchrony Measurement")
+        self.main_window.geometry(f"{App.width}x{App.height}")
+        self.main_window.protocol("WM_DELETE_WINDOW", self.__on_closing)
 
         # ==========create_two_frames=========
 
         # configure grid layout (2x1)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        self.main_window.grid_columnconfigure(1, weight=1)
+        self.main_window.grid_rowconfigure(0, weight=1)
 
         # set the left frame
-        self.frame_left = customtkinter.CTkFrame(master=self, width=180, corner_radius=0)
+        self.frame_left = customtkinter.CTkFrame(master=self.main_window, width=180, corner_radius=0)
         self.frame_left.grid(row=0, column=0, sticky="nswe")
 
         # set the right frame
-        self.frame_right = customtkinter.CTkFrame(master=self)
+        self.frame_right = customtkinter.CTkFrame(master=self.main_window)
         self.frame_right.grid(row=0, column=3, sticky="nswe", padx=20, pady=20)
 
         # ============load_images=============
@@ -59,6 +62,7 @@ class App(customtkinter.CTk):
         image_size = 35
         self.video_explore_image = self.__load_image("video_explore.png", image_size, image_size)
         self.file_image = self.__load_image("file.png", image_size, image_size)
+        self.refresh_image = self.__load_image("refresh.png", image_size, image_size)
 
         # ============ frame_left ============
 
@@ -87,8 +91,8 @@ class App(customtkinter.CTk):
         self.add_video_slider()
 
         self.video_explore_btn = customtkinter.CTkButton(master=self.frame_left, image=self.video_explore_image,
-                                                         text="", width=30, height=30,
-                                                         compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__video_btn_handler)))
+                                                        text="", width=30, height=30,
+                                                        compound="right", command=lambda:(self.my_thread.thread_excecuter(self.__video_btn_handler)))
         self.video_explore_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
 
         # ============ frame_right ============
@@ -137,7 +141,8 @@ class App(customtkinter.CTk):
         self.pose_roi_choice.grid(row=3, column=2, pady=10, padx=20, sticky="n")
 
         # set progressbar
-        self.progressbar = customtkinter.CTkProgressBar(master=self.frame_right, mode="indeterminnate")
+        self.progressbar = customtkinter.CTkProgressBar(master=self.frame_right, mode="indeterminnate",
+                                                        width=100)
 
         # set the 'Percentage Deviation' label and values slider
         self.perc_dev_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Percentage Deviation:",
@@ -150,11 +155,13 @@ class App(customtkinter.CTk):
         self.slider.set(0.0)
 
         # set the 'Start Analysis' button
-        self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=105,
-                                                 fg_color='gray', hover_color='green', text="Start Analysis",
-                                                 corner_radius=15, font=("Calibri Bold", -18),
-                                                 command=(lambda:self.my_thread.thread_excecuter(self.__start_btn_handler)))
+        self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=130,
+                                                fg_color='gray', hover_color='green', text="Start Analysis",
+                                                corner_radius=15, font=("Calibri Bold", -18),
+                                                command=(lambda:self.my_thread.thread_excecuter(self.__start_btn_handler)))
         self.start_btn.grid(row=8, column=0, columnspan=3, pady=10, padx=150, sticky="w")
+
+        self.main_window.mainloop()
 
     def strat_progressbar(self):
         self.progressbar.grid(row=5, column=2, padx=100, pady=10)
@@ -171,18 +178,15 @@ class App(customtkinter.CTk):
     # upload video and set the frame for it
     def __video_btn_handler(self):
         self.strat_progressbar()
-        video_frame = customtkinter.CTkFrame(self.frame_info)
-        video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
-        self.video = Video(video_frame)
+        self.video_frame = customtkinter.CTkFrame(self.frame_info)
+        self.video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
+        self.video = Video(self.video_frame)
         self.video_slider_max_val = int(mpy.VideoFileClip(self.video.path).duration)
         self.rs1.max_val = self.video_slider_max_val
         self.add_video_slider()
         self.stop_progressbar()
 
     def __start_btn_handler(self):
-        self.strat_progressbar()
-        time.sleep(1)
-
         rois_choices = [self.right_hand_roi_choice, self.left_hand_roi_choice, self.pose_roi_choice]
         selected_checkboxes = []
 
@@ -193,19 +197,17 @@ class App(customtkinter.CTk):
 
         # at least one ROI has to be selected
         if not selected_checkboxes:
-            # pop a fail message
-            title = "Start Fail"
-            message = "At least one ROI has to be selceted.\nPlease try again."
-
-            self.__message(title, message, "ok")
+            self.__message("Start Fail", "At least one ROI has to be selceted.\nPlease try again.", "ok")
+            return
 
         # video wasn't uploaded
         if not hasattr(self, 'video'):
-            # pop a fail message
-            title = "Start Fail"
-            message = "A video must be uploaded.\nPlease try again."
+            self.__message("Start Fail", "A video must be uploaded.\nPlease try again.", "ok")
+            return
 
-            self.__message(title, message, "ok")
+        self.disable_widgets()
+        self.strat_progressbar()
+        time.sleep(1)
 
         if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
             avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
@@ -240,6 +242,7 @@ class App(customtkinter.CTk):
 
         # show to the user the synchronization rate
         self.stop_progressbar()
+        self.reload_video_handler()
         self.__message(title, message, "ok")
 
     # handler for pressing the 'Reports Producer' button
@@ -410,7 +413,7 @@ class App(customtkinter.CTk):
     # pop a message window
     def __message(self, title, message, button):
         # set the window properties
-        msg_popup = self.__new_popup(title, config['gui']['pop_app']['width'], config['gui']['pop_app']['height'])
+        msg_popup = self.__new_popup(title, config['gui']['popup']['width'], config['gui']['popup']['height'])
 
         # set the label and button
         select_type_lbl = customtkinter.CTkLabel(master=msg_popup, text=message,
@@ -451,11 +454,37 @@ class App(customtkinter.CTk):
                             bar_color_outer="#1F6AA5", bar_radius=8, line_width=4)
         self.rs1.grid(row=4, column=0, padx=10, pady=10)
 
+    def disable_widgets(self):
+        self.start_btn.configure(state="disabled")
+        self.pose_roi_choice.configure(state="disabled")
+        self.left_hand_roi_choice.configure(state="disabled")
+        self.right_hand_roi_choice.configure(state="disabled")
+        self.video_explore_btn.grid_forget()
+        self.video_lbl.configure(text="")
+        self.slider.configure(state="disabled")
+
+    def reload_video_handler(self):
+        self.video_lbl.configure(text="Reload")
+        self.refresh_btn = customtkinter.CTkButton(master=self.frame_left, image=self.refresh_image, text="", width=30, height=30,
+                                                    compound="right", command=self.refresh)
+        self.refresh_btn.grid(row=2, column=0, pady=10, padx=20, sticky="n")
+    
     # handler for closing the main frame
     def __on_closing(self):
-        self.destroy()
-        post_routine() # delete results folder
+        self.main_window.destroy()
 
-    # run the main frame
-    def start(self):
-        self.mainloop()
+        post_routine()  # delete results folder
+
+    def refresh(self):
+        self.video_frame.destroy()
+        self.__on_closing()
+
+        with subprocess.Popen([r'.\venv\Scripts\python.exe', 'main.py']) as p: # Start a new process to start new analysis
+            p.wait()  # Wait for the process to complete
+        # TODO: check how the interpeter path works with executable file
+        
+        # check the return code of the process
+        if p.returncode == 0:
+            print('Script executed successfully')
+        else:
+            print('Script failed')
