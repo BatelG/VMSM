@@ -310,6 +310,10 @@ class App():
             # open file dialog to get the diractory to sace the report
             self.export_path = StringVar()
             folder_path = filedialog.askdirectory()
+            
+            if not folder_path:
+                return
+
             self.export_path.set(folder_path)
             rois = ['right_hand', 'left_hand', 'pose']
 

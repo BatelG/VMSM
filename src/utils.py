@@ -377,9 +377,11 @@ class Video:
 
         self.path = self.video_loader_btn_handler()
 
-        if self.path is not False:
-            self.player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
-            self.player.play()
+        while not self.path:
+            self.path = self.video_loader_btn_handler()
+
+        self.player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
+        self.player.play()
 
     def video_loader_btn_handler(self):  # TODO: after debug is done, change initial dir to c folder (?)
         filename_path = filedialog.askopenfilename(initialdir=PATH,
