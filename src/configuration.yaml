@@ -5,7 +5,7 @@ gui:
     width: 850
     height: 600
   popup:
-    width: 740
+    width: 780
     height: 200
   export:
     width: 400
