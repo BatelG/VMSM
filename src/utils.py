@@ -28,6 +28,7 @@ logging.basicConfig(filename=config['logger']['name'], filemode='w', level=loggi
 logger = logging.getLogger(__name__)
 
 def pre_routine():
+    post_routine()
     logger.info("*****pre_routine*****")
 
     if os.path.exists(RES_PATH):
@@ -235,8 +236,7 @@ def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pos
 
     return lst_df
 
-def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
-                pose_roi_choice):
+def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice):
     logger.info("*****get_synchronization*****")
 
     # *** The following actions are happening after user press "Start" button ***
@@ -245,26 +245,26 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     minX, maxX = Video.detect_object(video_path, config['video_paths']['first_object'])
 
     # find the other object
-
+# ************def crop_video(video_path, output, x_0_ratio, y_0_ratio, deltaX, deltaY): TODO delete
     # if maxX > 0.5:
     #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
     # if minX > 0.5:
     #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
-
-    if minX > 0.25 and minX > 0.75:
-        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
-    elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
-        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+    #####
+    if maxX > 0.5 and minX > 0.5:
+        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
+    elif (maxX < 0.5 and minX < 0.5) or (maxX > 0.5 and minX < 0.5):
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
     #####
     elif minX > 0.33 and minX > 0.77:
-        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
+        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
     elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
-        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
     #####
-    elif maxX > 0.5 and minX > 0.5:
-        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
-    elif (maxX < 0.5 and minX < 0.5) or (maxX > 0.5 and minX < 0.5):
-        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
+    elif minX > 0.25 and minX > 0.75:
+        Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
+    elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
 
     # crop the second object from remain video
     Video.detect_object(config['video_paths']['mid_res'], config['video_paths']['second_object'])
@@ -377,11 +377,9 @@ class Video:
 
         self.path = self.video_loader_btn_handler()
 
-        while not self.path:
-            self.path = self.video_loader_btn_handler()
-
-        self.player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
-        self.player.play()
+        if self.path:
+            self.player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
+            self.player.play()
 
     def video_loader_btn_handler(self):  # TODO: after debug is done, change initial dir to c folder (?)
         filename_path = filedialog.askopenfilename(initialdir=PATH,
@@ -516,7 +514,7 @@ class Video:
                                           mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
                                           mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
-                cv2.imshow('Detected Video', image)  # show the video feed
+                cv2.imshow('Detected Video', image)  # TODO: delete
 
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
@@ -542,11 +540,16 @@ class Video:
         logger.info(f'(minX+deltaX,minY+deltaY) = ({minX}+{deltaX},{minY}+{deltaY}) = ({minX + deltaX},{minY + deltaY})')
 
         cap.release()
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows()  # TODO: delete
+
+        # check if the object was detected
+        if (abs(minX) > 1) or (abs(maxX) > 1) or (abs(minY) > 1) or (abs(maxY) > 1):
+            logger.error("The system couldn't detect an object!")
+            raise Exception()
 
         logger.info("crop video file...")
-
         Video.crop_video(video_path, output, minX, minY, deltaX, deltaY)
+
         return minX, maxX
 
     @staticmethod
@@ -586,8 +589,8 @@ class Video:
                 out.write(crop_frame)  # save the new video
 
                 # see the video in real time
-                cv2.imshow('frame', frame)
-                cv2.imshow('croped', crop_frame)
+                cv2.imshow('frame', frame)  # TODO: delete
+                cv2.imshow('croped', crop_frame)  # TODO: delete
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -597,4 +600,4 @@ class Video:
         time.sleep(2)
         cap.release()
         out.release()
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows()  # TODO: delete

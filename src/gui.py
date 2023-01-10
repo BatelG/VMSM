@@ -35,7 +35,10 @@ class App():
         self.create_vmsm()
 
     def create_vmsm(self):
-        pre_routine()  # create results folder
+        try:
+            pre_routine()  # create results folder
+        except Exception:
+            pass
 
         self.main_window = customtkinter.CTk()
         self.my_thread = ExecThread()
@@ -154,6 +157,8 @@ class App():
         self.slider.grid(row=6, column=0, columnspan=1, pady=10, padx=125, sticky="ns")
         self.slider.set(0.0)
 
+        self.video = None
+
         # set the 'Start Analysis' button
         self.start_btn = customtkinter.CTkButton(master=self.frame_right, height=45, width=130,
                                                 fg_color='gray', hover_color='green', text="Start Analysis",
@@ -181,6 +186,12 @@ class App():
         self.video_frame = customtkinter.CTkFrame(self.frame_info)
         self.video_frame.grid(column=0, row=0, sticky="nwe", padx=15, pady=15)
         self.video = Video(self.video_frame)
+        
+        if not self.video.path:
+            self.stop_progressbar()
+            self.video = None
+            return
+
         self.video_slider_max_val = int(mpy.VideoFileClip(self.video.path).duration)
         self.rs1.max_val = self.video_slider_max_val
         self.add_video_slider()
@@ -197,53 +208,53 @@ class App():
 
         # at least one ROI has to be selected
         if not selected_checkboxes:
-            self.__message("Start Fail", "At least one ROI has to be selceted.\nPlease try again.", "ok")
+            self.my_thread.thread_excecuter(self.__message("Start Fail", "At least one ROI has to be selceted.\nPlease try again.", "ok"))
             return
 
         # video wasn't uploaded
-        if not hasattr(self, 'video'):
-            self.__message("Start Fail", "A video must be uploaded.\nPlease try again.", "ok")
+        if not self.video:
+            self.my_thread.thread_excecuter(self.__message("Start Fail", "A video must be uploaded.\nPlease try again.", "ok"))
             return
 
         self.disable_widgets()
         self.strat_progressbar()
         time.sleep(1)
 
-        if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
-            avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
-                    self.pose_roi_choice)
-        else:
-            avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+        try:
+            if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
+                avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
                         self.pose_roi_choice)
+            else:
+                avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
+                            self.pose_roi_choice)
+        except Exception:
+            self.my_thread.thread_excecuter(self.__message("Start Fail", "The VMSM system couldn't detect one or more of the objects!\nPlease try again.", "ok"))
+        else:
+            sync_rate, padx, color = get_synchronization_rate(avg_distance, self.slider.get())
 
-        sync_rate, padx, color = get_synchronization_rate(avg_distance, self.slider.get())
+            # set the 'Synchronization Rate' label
+            self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, font=("Calibri Bold", -20))
+            self.sync_rate_lbl.grid(row=7, column=0, columnspan=2, pady=10, sticky="n")
 
-        # set the 'Synchronization Rate' label
-        self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, font=("Calibri Bold", -20))
-        self.sync_rate_lbl.grid(row=7, column=0, columnspan=2, pady=10, sticky="n")
+            # configure the right values, according to the grade
+            self.sync_rate_lbl.configure(text=sync_rate, text_color=color)
+            self.sync_rate_lbl.grid(padx=padx)
 
-        # configure the right values, according to the grade
-        self.sync_rate_lbl.configure(text=sync_rate, text_color=color)
-        self.sync_rate_lbl.grid(padx=padx)
+            # add option to export the analysis result reports (set label and button)
+            self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
+                                                    font=("Calibri Bold", -20))  # font name and size in px
+            self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
 
-        # pop a success message
-        title = "Start Success"
-        message = "The Interpersonal Synchrony Analysis\nCompleted Successfully !"
+            self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
+                                                        text="", width=30, height=30,
+                                                        compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__report_btn_handler)))
+            self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
 
-        # add option to export the analysis result reports (set label and button)
-        self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer",
-                                                font=("Calibri Bold", -20))  # font name and size in px
-        self.report_lbl.grid(row=3, column=0, pady=25, padx=10, sticky="n")
-
-        self.file_image_btn = customtkinter.CTkButton(master=self.frame_left, image=self.file_image,
-                                                    text="", width=30, height=30,
-                                                    compound="right", command=(lambda:self.my_thread.thread_excecuter(self.__report_btn_handler)))
-        self.file_image_btn.grid(row=4, column=0, pady=0, padx=5, sticky="n")
-
-        # show to the user the synchronization rate
-        self.stop_progressbar()
-        self.reload_video_handler()
-        self.__message(title, message, "ok")
+            # show to the user the synchronization rate
+            self.my_thread.thread_excecuter(self.__message("Start Success", "The Interpersonal Synchrony Analysis\nCompleted Successfully !", "ok"))
+        finally:
+            self.stop_progressbar()
+            self.reload_video_handler()
 
     # handler for pressing the 'Reports Producer' button
     def __report_btn_handler(self):
@@ -299,11 +310,7 @@ class App():
 
         # at least one report type has to be selected
         if not selected_checkboxes:
-            # pop a fail message
-            title = "Export Fail"
-            message = "At least one report type has to be selceted.\nPlease try again."
-
-            self.__message(title, message, "ok")
+            self.my_thread.thread_excecuter(self.__message("Export Fail", "At least one report type has to be selceted.\nPlease try again.", "ok"))
         else:
             file_cnt = 0  # determines the message of the file saved popup
 
@@ -382,13 +389,11 @@ class App():
                                                       compound="left", command=(lambda:self.my_thread.thread_excecuter(self.__show_in_explorer_btn_handler)))
             self.folder_btn.grid(row=6, column=0, pady=0, padx=0, sticky="n")
 
-            # pop a success message
-            title = "Export Success"
-            sub_message = "The file was" if file_cnt == 1 else "The files were"
-            message = f"{sub_message} downloaded successfully !\nTake a look :)"
-
             self.stop_progressbar()
-            self.__message(title, message, "ok")
+
+            # pop a success message
+            sub_message = "The file was" if file_cnt == 1 else "The files were"
+            self.my_thread.thread_excecuter(self.__message("Export Success", f"{sub_message} downloaded successfully !\nTake a look :)", "ok"))
             self.export_popup.destroy()
 
     # handler for pressing 'Show in File Explorer' button
@@ -426,7 +431,7 @@ class App():
 
         btn = customtkinter.CTkButton(master=msg_popup, text=button, width=70, height=40,
                                       fg_color='gray', hover_color='green', compound="right",
-                                      command=msg_popup.destroy)
+                                      command=sys.exit)
         btn.grid(row=1, column=3, padx=190, sticky='ns')
 
         # pop the message
@@ -477,16 +482,14 @@ class App():
     def __on_closing(self):
         self.main_window.destroy()
 
-        post_routine()  # delete results folder
-
     def refresh(self):
-        self.video_frame.destroy()
         self.__on_closing()
 
-        with subprocess.Popen([r'.\venv\Scripts\python.exe', 'main.py']) as p: # Start a new process to start new analysis
-            p.wait()  # Wait for the process to complete
+        with subprocess.Popen([r'.\venv\Scripts\python.exe', 'main.py']) as p:  # start a new process to start new analysis
+            sys.exit()
+            # p.wait()  # Wait for the process to complete
         # TODO: check how the interpeter path works with executable file
-        
+
         # check the return code of the process
         if p.returncode == 0:
             print('Script executed successfully')
