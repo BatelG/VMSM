@@ -14,10 +14,11 @@ gui:
       name: results.pdf
 video_paths:
   mp4_video: 'results\\origin.mp4'
-  first_object: 'results\\1st_result.mp4'
-  first_object2: 'results\\1st_result2.mp4'
-  second_object: 'results\\2nd_result.mp4'
-  second_object2: 'results\\2nd_result2.mp4'
+  temp_object: 'results\\temp_object.mp4'
+  left_object: 'results\\left_object.mp4'
+  left_object2: 'results\\left_object2.mp4'
+  right_object: 'results\\right_object.mp4'
+  right_object2: 'results\\right_object2.mp4'
   mid_res: 'results\\middle_result.mp4'
   res: 'results\\'
   cutted: 'results\\cutted.mp4'
