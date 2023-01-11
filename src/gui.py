@@ -265,15 +265,15 @@ class App():
         # export txt raw data choice
         checkbox_var_txt = IntVar(value=0)  # init checkbox
         self.txt_choice = CTkCheckBox(master=self.export_popup, text="TXT Raw Data", text_color='black',
-                                      command=self.__toggle_state(checkbox_var_txt),
-                                      variable=checkbox_var_txt, onvalue="on", offvalue="off")
+                                    command=self.__toggle_state(checkbox_var_txt),
+                                    variable=checkbox_var_txt, onvalue="on", offvalue="off")
         self.txt_choice.grid(row=1, column=0, pady=10, padx=60)
 
         # export csv raw data choice
         checkbox_var_csv = IntVar(value=0)  # init checkbox
         self.csv_choice = CTkCheckBox(master=self.export_popup, text="CSV Raw Data", text_color='black',
-                                      command=self.__toggle_state(checkbox_var_csv),
-                                      variable=checkbox_var_csv, onvalue="on", offvalue="off")
+                                    command=self.__toggle_state(checkbox_var_csv),
+                                    variable=checkbox_var_csv, onvalue="on", offvalue="off")
         self.csv_choice.grid(row=2, column=0, pady=10, padx=60)
 
         # export pdf report choice
@@ -330,10 +330,10 @@ class App():
                     logger.info("Creating TXT raw data reports")
 
                     for roi in rois:
-                        for roi_dictA, roi_dictB in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
-                            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys())):
-                                df = pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index()
-                                df = df.rename(columns={'index': 'frame'})
+                        for roi_dictA, roi_dictB, roi_dictC in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB, self.lst_of_dist_dict_between_objects):
+                            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys()) and (roi in roi_dictC.keys())):
+                                df = pd.concat([roi_dictA[roi], roi_dictB[roi], roi_dictC[roi]], axis=1).reset_index()
+                                df = df.rename(columns={'index': 'Frame'})
                                 file_path = f'{self.export_path.get()}\\raw_data_{roi}.txt'
 
                                 with open(file_path, 'w', encoding='utf-8') as f:
@@ -343,8 +343,8 @@ class App():
 
                 if choice == 'PDF Report':
                     # check if charts were created
-                    # path = f"{config['video_paths']['res']}{*.png}"
                     imagelist = glob.glob(f"{config['video_paths']['res']}*.png")
+
                     if not imagelist:
                         return
 
@@ -366,9 +366,9 @@ class App():
                     logger.info("Creating CSV raw data reports")
 
                     for roi in rois:
-                        for roi_dictA, roi_dictB in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB):
-                            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys())):
-                                df = pd.concat([roi_dictA[roi], roi_dictB[roi]], axis=1).reset_index()
+                        for roi_dictA, roi_dictB, roi_dictC in itertools.product(self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB, self.lst_of_dist_dict_between_objects):
+                            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys()) and (roi in roi_dictC.keys())):
+                                df = pd.concat([roi_dictA[roi], roi_dictB[roi], roi_dictC[roi]], axis=1).reset_index()
                                 df = df.rename(columns={'index': 'Frame'})
                                 file_path = f'{self.export_path.get()}\\raw_data_{roi}.csv'
 
@@ -416,6 +416,7 @@ class App():
 
         popup.title(title)
         popup.geometry(f"{width}x{height}")
+        popup.protocol("WM_DELETE_WINDOW", sys.exit)
 
         return popup
 
@@ -426,16 +427,15 @@ class App():
 
         # set the label and button
         select_type_lbl = customtkinter.CTkLabel(master=msg_popup, text=message,
-                                                 text_color='black', font=("Calibri Bold", -20))
+                                                text_color='black', font=("Calibri Bold", -20))
         select_type_lbl.grid(row=0, column=3, pady=10, padx=1)
 
         btn = customtkinter.CTkButton(master=msg_popup, text=button, width=70, height=40,
-                                      fg_color='gray', hover_color='green', compound="right",
-                                      command=sys.exit)
+                                    fg_color='gray', hover_color='green', compound="right",
+                                    command=sys.exit)
         btn.grid(row=1, column=3, padx=190, sticky='ns')
 
-        # pop the message
-        msg_popup.mainloop()
+        msg_popup.mainloop()  # pop the message
 
     # handler for changing the theme mode
     def __change_mode(self):

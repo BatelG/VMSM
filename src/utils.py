@@ -101,7 +101,6 @@ def _create_distance_chart(lst_df, object_str):
                     if (ax_df[idx] == 0 or ay_df[idx] == 0) and (ax_df[idx+1] == 0 or ay_df[idx+1] == 0):
                         number_of_illegal_frames += 1
                         if number_of_illegal_frames == config['video_processing']['allow']['following_frames_treshold']:
-                            # TODO inform the user in case of missing information (?)
                             logger.info(f'there is not enough data at roi: {key} object - {object_str}')
                             data_flag = True
                             break
@@ -127,13 +126,12 @@ def _create_distance_chart(lst_df, object_str):
         for dist_dict in lst_of_dist_dict:
             for key in dist_dict.keys():
                 df = dist_dict[key].reset_index()
-                df = df.rename(columns={'index': 'frame'})
+                df = df.rename(columns={'index': 'Frame'})
                 try:
                     df.plot(x='frame', y=object_str, kind='line')
-                    plt.title(f'distance of roi {key} between following frames - {object_str}')
+                    plt.title(f"Distance of ROI '{key}' between following frames for {object_str}")
                     plt.savefig(f'{RES_PATH}distance chart between following frames of roi {key} - {object_str}')
                 except Exception:
-                    # TODO inform the user in case of missing information (?)
                     logger.info(f'there is not enough data at roi: {key} object - {object_str}')
 
     return lst_of_dist_dict
@@ -178,19 +176,18 @@ def create_distance_chart(lst_df, lst_df2):
                 except Exception:
                     continue
 
-            lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['distance'])})
+            lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['Both Objects'])})
             illegal_frames.append({key: number_of_illegal_frames})
 
         for dist_dict in lst_of_dist_dict:
             for key in dist_dict.keys():
                 df = dist_dict[key].reset_index()
-                df = df.rename(columns={'index': 'frame'})
+                df = df.rename(columns={'index': 'Frame'})
                 try:
-                    df.plot(x='frame', y='distance', kind='line')
-                    plt.title(f'distance of roi {key} between the two objects')
+                    df.plot(x='frame', y='Both Objects', kind='line')
+                    plt.title(f"Distance of ROI '{key}' between both objects")
                     plt.savefig(f'{RES_PATH}distance chart between the objects of roi {key}')
                 except Exception:
-                    # TODO inform the user in case of missing information (?)
                     logger.info(f'there is not enough data at roi: {key} between the objects')
 
     return lst_of_dist_dict
@@ -241,45 +238,54 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
 
     # *** The following actions are happening after user press "Start" button ***
 
-    # crop the first object from the video
-    minX, maxX = Video.detect_object(video_path, config['video_paths']['first_object'])
+    # crop the first object from the video. Save to temporary path.
+    minX, maxX = Video.detect_object(video_path, config['video_paths']['temp_object'])
 
     # find the other object
-# ************def crop_video(video_path, output, x_0_ratio, y_0_ratio, deltaX, deltaY): TODO delete
-    # if maxX > 0.5:
-    #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # right
-    # if minX > 0.5:
-    #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # left
-    #####
     if maxX > 0.5 and minX > 0.5:
+        flag_object = "right"
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
     elif (maxX < 0.5 and minX < 0.5) or (maxX > 0.5 and minX < 0.5):
+        flag_object = "left"
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
     #####
     elif minX > 0.33 and minX > 0.77:
+        flag_object = "right"
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
     elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
+        flag_object = "left"
         Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
     #####
     elif minX > 0.25 and minX > 0.75:
+        flag_object = "right"
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
     elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
+        flag_object = "left"
         Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
 
     # crop the second object from remain video
-    Video.detect_object(config['video_paths']['mid_res'], config['video_paths']['second_object'])
+    if flag_object == "right":
+        Video.detect_object(config['video_paths']['mid_res'], config['video_paths']['left_object'])
+    else:
+        Video.detect_object(config['video_paths']['mid_res'], config['video_paths']['right_object'])
 
     # getting the dimension of the videos
-    vid = cv2.VideoCapture(config['video_paths']['first_object'])
+    vid = cv2.VideoCapture(config['video_paths']['left_object'])
     height1 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width1 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-    vid = cv2.VideoCapture(config['video_paths']['second_object'])
+    vid = cv2.VideoCapture(config['video_paths']['right_object'])
     height2 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width2 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     logger.info("before transformations:")
-    logger.info(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
+    logger.info(f"left object's video - ({width1},{height1})\nright object's video - ({width2},{height2})\n")
 
     logger.info('start to do transformations...')
 
@@ -287,30 +293,30 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     if width1 + height1 >= width2 + height2:
         new_h = int(height2)
         new_w = int(width2)
-        new_path = config['video_paths']['first_object2']
-        path = config['video_paths']['first_object']
+        new_path = config['video_paths']['left_object2']
+        path = config['video_paths']['left_object']
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
         clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
         clip_resized_mirrored.write_videofile(new_path)
 
-        vid1 = cv2.VideoCapture(config['video_paths']['second_object'])
+        vid1 = cv2.VideoCapture(config['video_paths']['right_object'])
         height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
         width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     else:
         new_h = int(height1)
         new_w = int(width1)
-        path = config['video_paths']['second_object']
-        new_path = config['video_paths']['second_object2']
+        path = config['video_paths']['right_object']
+        new_path = config['video_paths']['right_object2']
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
         clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
         clip_resized_mirrored.write_videofile(new_path)
 
-        vid1 = cv2.VideoCapture(config['video_paths']['first_object'])
+        vid1 = cv2.VideoCapture(config['video_paths']['left_object'])
         height1 = vid1.get(cv2.CAP_PROP_FRAME_HEIGHT)
         width1 = vid1.get(cv2.CAP_PROP_FRAME_WIDTH)
 
@@ -319,7 +325,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     width2 = vid2.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     logger.info("after transformations:")
-    logger.info(f'first video - ({width1},{height1})\nsecond video - ({width2},{height2})\n')
+    logger.info(f"left object's video - ({width1},{height1})\right object's video - ({width2},{height2})\n")
 
     ###############################################################
 
@@ -327,18 +333,18 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
                     pose_roi_choice, new_path)
 
     lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
-                        pose_roi_choice, config['video_paths']['first_object'])
+                        pose_roi_choice, config['video_paths']['left_object'])
 
     lst_of_dist_dict_between_objects = create_distance_chart(lst_df, lst_df2)
-    lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Object A')
-    lst_of_dist_dict_objectB = create_distance_chart(lst_df2, 'Object B')
+    lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Left Object')
+    lst_of_dist_dict_objectB = create_distance_chart(lst_df2, 'Right Object')
 
     lst_avg = []
 
     for dictionary in lst_of_dist_dict_between_objects:
         # calculate the avarage distance for each roi
         for roi in dictionary.keys():
-            lst_avg.append(dictionary[roi]['distance'].mean())
+            lst_avg.append(dictionary[roi]['Both Objects'].mean())
 
     rate = (sum(lst_avg)/len(lst_avg)) if len(lst_avg) > 0 else 1
 
@@ -451,7 +457,7 @@ class Video:
 
     @staticmethod
     def rescaleFrame(frame, scale=0.5):
-        if frame is None:
+        if frame is None:  # 'if not frame' isan't working!
             return
 
         width = int(frame.shape[1] * scale)  # must be an integer
@@ -486,7 +492,7 @@ class Video:
             while cap.isOpened():
                 _, frame = cap.read()
 
-                if frame is None:
+                if frame is None:  # 'if not frame' isan't working!
                     break
 
                 frame_resized = Video.rescaleFrame(frame, scale=1)  # resize big video
@@ -495,6 +501,7 @@ class Video:
 
                 if not results.pose_landmarks:
                     break
+
                 logger.info(results.pose_landmarks.landmark)  # write coordinates to log
 
                 # loop on landmarks set for finding min,max of (x,y)
@@ -511,8 +518,8 @@ class Video:
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                                          mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
-                                          mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
+                                        mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
+                                        mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
                 cv2.imshow('Detected Video', image)  # TODO: delete
 
