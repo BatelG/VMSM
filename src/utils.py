@@ -8,7 +8,7 @@ import time
 import sys
 import tkinter as tk
 from tkinter import filedialog
-import pandas as pd
+import pandas as pnd
 import matplotlib.pyplot as plt
 import numpy
 from tkvideo import tkvideo
@@ -70,7 +70,7 @@ def get_c_mass(roi, lst_res):
                 lst_vals.append([c_mass_x, c_mass_y])
     except Exception as error:
         raise error
-    return pd.DataFrame(lst_vals, columns=['c_mass_x', 'c_mass_y'])
+    return pnd.DataFrame(lst_vals, columns=['c_mass_x', 'c_mass_y'])
 
 
 # calculate Euclidean distance between following pairs of frames within one object
@@ -116,7 +116,7 @@ def _create_distance_chart(lst_df, object_str):
                     continue
 
             if not data_flag:
-                lst_of_dist_dict.append({key: pd.DataFrame(lst_vals, columns=[object_str])})
+                lst_of_dist_dict.append({key: pnd.DataFrame(lst_vals, columns=[object_str])})
 
     return lst_of_dist_dict
 
@@ -164,7 +164,7 @@ def create_distance_chart(lst_df, lst_df2):
                     logger.info(str(error))
                     continue
 
-            lst_of_dist_dict.append({key: pd.DataFrame(lst_vals, columns=['Between Objects'])})
+            lst_of_dist_dict.append({key: pnd.DataFrame(lst_vals, columns=['Between Objects'])})
             # if illegal_frames > following_frames_treshold, there won't be any data frame for the spesific ROI.
             # This is just an indicator, currently not in use.
             illegal_frames.append({key: number_of_illegal_frames})
@@ -325,7 +325,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     for roi in rois:
         for roi_dictA, roi_dictB, roi_dictC in itertools.product(lst_of_dist_dict_objectA, lst_of_dist_dict_objectB, lst_of_dist_dict_between_objects):
             if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys()) and (roi in roi_dictC.keys())):
-                df = pd.concat([roi_dictA[roi], roi_dictB[roi], roi_dictC[roi]], axis=1).reset_index()
+                df = pnd.concat([roi_dictA[roi], roi_dictB[roi], roi_dictC[roi]], axis=1).reset_index()
                 df = df.rename(columns={'index': 'Frame'})
 
                 try:
