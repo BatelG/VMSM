@@ -2,14 +2,15 @@ import os
 import logging
 import shutil
 import pathlib
+import itertools
 from threading import Thread
 import time
 import sys
 import tkinter as tk
 from tkinter import filedialog
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy
-import pandas
 from tkvideo import tkvideo
 import cv2
 import mediapipe as mp
@@ -37,20 +38,13 @@ def pre_routine():
     else:
         os.mkdir(RES_PATH)
 
+
 def post_routine():
     logger.info("*****post_routine*****")
 
     if os.path.exists(RES_PATH) and os.path.isdir(RES_PATH):
         shutil.rmtree(RES_PATH)
 
-# TODO check if GUI workes, then change it
-# # create new popup window and set it's properties
-# class Popup():
-#     def __init__(self, title, width, height):
-#         popup = Tk()
-
-#         popup.title(title)
-#         popup.geometry(f"{width}x{height}")
 
 def get_c_mass(roi, lst_res):
     logger.info("*****get_c_mass*****")
@@ -74,9 +68,9 @@ def get_c_mass(roi, lst_res):
                 c_mass_y = y_sum
                 x_sum, y_sum, cnt = 0, 0, 0
                 lst_vals.append([c_mass_x, c_mass_y])
-    except Exception as e:
-        raise e
-    return pandas.DataFrame(lst_vals, columns=['c_mass_x', 'c_mass_y'])
+    except Exception as error:
+        raise error
+    return pd.DataFrame(lst_vals, columns=['c_mass_x', 'c_mass_y'])
 
 
 # calculate Euclidean distance between following pairs of frames within one object
@@ -117,24 +111,15 @@ def _create_distance_chart(lst_df, object_str):
 
                     dist = numpy.linalg.norm(point_a - point_b)
                     lst_vals.append([dist])
-                except Exception:
+                except Exception as error:
+                    logger.info(str(error))
                     continue
 
             if not data_flag:
-                lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=[object_str])})
-
-        for dist_dict in lst_of_dist_dict:
-            for key in dist_dict.keys():
-                df = dist_dict[key].reset_index()
-                df = df.rename(columns={'index': 'Frame'})
-                try:
-                    df.plot(x='frame', y=object_str, kind='line')
-                    plt.title(f"Distance of ROI '{key}' between following frames for {object_str}")
-                    plt.savefig(f'{RES_PATH}distance chart between following frames of roi {key} - {object_str}')
-                except Exception:
-                    logger.info(f'there is not enough data at roi: {key} object - {object_str}')
+                lst_of_dist_dict.append({key: pd.DataFrame(lst_vals, columns=[object_str])})
 
     return lst_of_dist_dict
+
 
 # calculate Euclidean distance between two objects
 def create_distance_chart(lst_df, lst_df2):
@@ -145,6 +130,7 @@ def create_distance_chart(lst_df, lst_df2):
 
     illegal_frames = []
     lst_of_dist_dict = []
+
     for index, dic_of_df in enumerate(lst_df):
         for key in dic_of_df.keys():
             ax_df = dic_of_df[key]['c_mass_x']
@@ -162,6 +148,7 @@ def create_distance_chart(lst_df, lst_df2):
                     if ax_df[idx] == 0 or bx_df[idx] == 0 or ay_df[idx] == 0 or by_df[idx] == 0:
                         number_of_illegal_frames += 1
                         continue
+
                     ax = ax_df[idx]
                     ay = ay_df[idx]
 
@@ -173,22 +160,14 @@ def create_distance_chart(lst_df, lst_df2):
 
                     dist = numpy.linalg.norm(point_a - point_b)
                     lst_vals.append([dist])
-                except Exception:
+                except Exception as error:
+                    logger.info(str(error))
                     continue
 
-            lst_of_dist_dict.append({key: pandas.DataFrame(lst_vals, columns=['Both Objects'])})
+            lst_of_dist_dict.append({key: pd.DataFrame(lst_vals, columns=['Between Objects'])})
+            # if illegal_frames > following_frames_treshold, there won't be any data frame for the spesific ROI.
+            # This is just an indicator, currently not in use.
             illegal_frames.append({key: number_of_illegal_frames})
-
-        for dist_dict in lst_of_dist_dict:
-            for key in dist_dict.keys():
-                df = dist_dict[key].reset_index()
-                df = df.rename(columns={'index': 'Frame'})
-                try:
-                    df.plot(x='frame', y='Both Objects', kind='line')
-                    plt.title(f"Distance of ROI '{key}' between both objects")
-                    plt.savefig(f'{RES_PATH}distance chart between the objects of roi {key}')
-                except Exception:
-                    logger.info(f'there is not enough data at roi: {key} between the objects')
 
     return lst_of_dist_dict
 
@@ -232,6 +211,7 @@ def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pos
         lst_df.append({'pose': get_c_mass('pose', lst_res)})
 
     return lst_df
+
 
 def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice):
     logger.info("*****get_synchronization*****")
@@ -339,12 +319,37 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Left Object')
     lst_of_dist_dict_objectB = create_distance_chart(lst_df2, 'Right Object')
 
+    # create distance charts
+    rois = ['right_hand', 'left_hand', 'pose']
+
+    for roi in rois:
+        for roi_dictA, roi_dictB, roi_dictC in itertools.product(lst_of_dist_dict_objectA, lst_of_dist_dict_objectB, lst_of_dist_dict_between_objects):
+            if ((roi in roi_dictA.keys()) and (roi in roi_dictB.keys()) and (roi in roi_dictC.keys())):
+                df = pd.concat([roi_dictA[roi], roi_dictB[roi], roi_dictC[roi]], axis=1).reset_index()
+                df = df.rename(columns={'index': 'Frame'})
+
+                try:
+                    plt.figure(figsize=(8, 5))
+                    plt.plot(df['Frame'], df['Left Object'], label='Left Object')
+                    plt.plot(df['Frame'], df['Right Object'], label='Right Object')
+                    plt.plot(df['Frame'], df['Between Objects'], label='Between Objects')
+                    plt.xlabel("Frame Number")
+                    plt.ylabel("Normalized Distance")
+                    plt.legend(loc="upper right", fontsize=10)
+                    plt.suptitle("*Please notice that the object's line is invisiable in case the system couldn't identify it well.", fontsize=9, fontweight='bold', y=0.024)
+                    plt.title(f"Distances graph of ROI '{roi}'")
+                    plt.savefig(f'{RES_PATH}Distances graph of ROI {roi}')
+                    plt.close()
+                except Exception as error:
+                    logger.info(str(error))
+
+    # calculate the syncronization rate
     lst_avg = []
 
     for dictionary in lst_of_dist_dict_between_objects:
         # calculate the avarage distance for each roi
         for roi in dictionary.keys():
-            lst_avg.append(dictionary[roi]['Both Objects'].mean())
+            lst_avg.append(dictionary[roi]['Between Objects'].mean())
 
     rate = (sum(lst_avg)/len(lst_avg)) if len(lst_avg) > 0 else 1
 
