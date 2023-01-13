@@ -227,7 +227,8 @@ class App():
             else:
                 avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice,
                             self.pose_roi_choice)
-        except Exception:
+        except Exception as error:
+            logger.info(str(error))
             self.my_thread.thread_excecuter(self.__message("Start Fail", "The VMSM system couldn't detect one or more of the objects!\nPlease try again.", "ok"))
         else:
             sync_rate, padx, color = get_synchronization_rate(avg_distance, self.slider.get())
@@ -350,12 +351,12 @@ class App():
 
                     file_cnt = file_cnt + 1
                     logger.info("Creating PDF report")
-                    pdf = FPDF()
+                    pdf = FPDF(orientation="landscape", format='A4')
 
                     # imagelist is the list with all image filenames
                     for image in imagelist:
                         pdf.add_page()
-                        pdf.image(image, 0, 0, 210, 297)  # A4
+                        pdf.image(image)
 
                     file_path = f"{self.export_path.get()}\\{config['gui']['export']['pdf']['name']}" 
                     pdf.output(file_path, "F")
