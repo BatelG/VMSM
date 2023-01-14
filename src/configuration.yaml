@@ -11,7 +11,10 @@ gui:
     width: 400
     height: 400
     pdf:
-      name: results.pdf
+      name: report.pdf
+  video_loader:
+    folder:
+      path: 'C:\Users\batel\Desktop\Projects\FinalProject\Tests'  # TODO change to C folder.
 video_paths:
   mp4_video: 'results\\origin.mp4'
   temp_object: 'results\\temp_object.mp4'
