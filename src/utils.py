@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def pre_routine():
     post_routine()
-    logger.info("*****pre_routine*****")
+    logger.info("*****Pre Routine*****")
 
     if os.path.exists(RES_PATH):
         shutil.rmtree(RES_PATH)
@@ -40,14 +40,14 @@ def pre_routine():
 
 
 def post_routine():
-    logger.info("*****post_routine*****")
+    logger.info("*****Post Routine*****")
 
     if os.path.exists(RES_PATH) and os.path.isdir(RES_PATH):
         shutil.rmtree(RES_PATH)
 
 
 def get_c_mass(roi, lst_res):
-    logger.info("*****get_c_mass*****")
+    logger.info("*****Get Center of mass*****")
 
     c_mass_x, c_mass_y, x_sum, y_sum, cnt = 0, 0, 0, 0, 0
     lst_vals = []
@@ -75,7 +75,7 @@ def get_c_mass(roi, lst_res):
 
 # calculate Euclidean distance between following pairs of frames within one object
 def _create_distance_chart(lst_df, object_str):
-    logger.info("*****_create_distance_chart*****")
+    logger.info("*****Create Distance Chart*****")
 
     lst_of_dist_dict = []
     for _, dict_of_df in enumerate(lst_df):
@@ -95,7 +95,7 @@ def _create_distance_chart(lst_df, object_str):
                     if (ax_df[idx] == 0 or ay_df[idx] == 0) and (ax_df[idx+1] == 0 or ay_df[idx+1] == 0):
                         number_of_illegal_frames += 1
                         if number_of_illegal_frames == config['video_processing']['allow']['following_frames_treshold']:
-                            logger.info(f'there is not enough data at roi: {key} object - {object_str}')
+                            logger.info(f'There is not enough data at roi: {key} object - {object_str}')
                             data_flag = True
                             break
                         continue
@@ -112,7 +112,7 @@ def _create_distance_chart(lst_df, object_str):
                     dist = numpy.linalg.norm(point_a - point_b)
                     lst_vals.append([dist])
                 except Exception as error:
-                    logger.info(str(error))
+                    logger.error(str(error))
                     continue
 
             if not data_flag:
@@ -123,7 +123,7 @@ def _create_distance_chart(lst_df, object_str):
 
 # calculate Euclidean distance between two objects
 def create_distance_chart(lst_df, lst_df2):
-    logger.info("*****create_distance_chart*****")
+    logger.info("*****Create Distance Chart*****")
 
     if lst_df2.__class__ is str:
         return _create_distance_chart(lst_df, lst_df2)
@@ -161,7 +161,7 @@ def create_distance_chart(lst_df, lst_df2):
                     dist = numpy.linalg.norm(point_a - point_b)
                     lst_vals.append([dist])
                 except Exception as error:
-                    logger.info(str(error))
+                    logger.error(str(error))
                     continue
 
             lst_of_dist_dict.append({key: pnd.DataFrame(lst_vals, columns=['Between Objects'])})
@@ -173,7 +173,7 @@ def create_distance_chart(lst_df, lst_df2):
 
 
 def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice, path):
-    logger.info("*****get_df*****")
+    logger.info("*****Get Data Frame*****")
 
     mp_holistic = mp.solutions.holistic  # set up holistic module
     cap = cv2.VideoCapture(path)  # import video from file
@@ -214,7 +214,7 @@ def get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pos
 
 
 def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice):
-    logger.info("*****get_synchronization*****")
+    logger.info("*****Get Synchronization*****")
 
     # *** The following actions are happening after user press "Start" button ***
 
@@ -264,10 +264,10 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     height2 = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width2 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-    logger.info("before transformations:")
-    logger.info(f"left object's video - ({width1},{height1})\nright object's video - ({width2},{height2})\n")
+    logger.info("Before transformations:")
+    logger.info(f"Left object's video - ({width1},{height1})\nright object's video - ({width2},{height2})\n")
 
-    logger.info('start to do transformations...')
+    logger.info('Start to do transformations...')
 
     # compare between the 2 object dimension, the bigger one pass an resize + scaling transformations
     if width1 + height1 >= width2 + height2:
@@ -304,8 +304,8 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     height2 = vid2.get(cv2.CAP_PROP_FRAME_HEIGHT)
     width2 = vid2.get(cv2.CAP_PROP_FRAME_WIDTH)
 
-    logger.info("after transformations:")
-    logger.info(f"left object's video - ({width1},{height1})\right object's video - ({width2},{height2})\n")
+    logger.info("After transformations:")
+    logger.info(f"Left object's video - ({width1},{height1})\right object's video - ({width2},{height2})\n")
 
     ###############################################################
 
@@ -313,7 +313,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
                     pose_roi_choice, new_path)
 
     lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
-                        pose_roi_choice, config['video_paths']['left_object'])
+                    pose_roi_choice, config['video_paths']['left_object'])
 
     lst_of_dist_dict_between_objects = create_distance_chart(lst_df, lst_df2)
     lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Left Object')
@@ -341,7 +341,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
                     plt.savefig(f'{RES_PATH}Distances graph of ROI {roi}')
                     plt.close()
                 except Exception as error:
-                    logger.info(str(error))
+                    logger.error(str(error))
 
     # calculate the syncronization rate
     lst_avg = []
@@ -358,7 +358,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
 
 # get the synchronization rate and label configuration values, according to the grade
 def get_synchronization_rate(nd, pd):
-    logger.info("*****get_synchronization_rate*****")
+    logger.info("*****Get Synchronization Rate*****")
 
     if nd >= pd:
         grade = max(1-nd, 1-nd+pd)
@@ -367,12 +367,16 @@ def get_synchronization_rate(nd, pd):
 
     # the second value in 'range' method doesn't count
     if 0 <= grade <= 0.33:
-        return "Weak Synchronization", 100, '#FF3200'
+        logger.info("Classification level: Weak Synchronization\nSynchronization rate: {grade}")
+        return "Weak Synchronization", 100, '#FF3200', round(grade, 2)
     if 0.34 <= grade <= 0.66:
-        return "Medium Synchronization", 92, '#FF9B00'
+        logger.info("Classification level: Medium Synchronization\nSynchronization rate: {grade}")
+        return "Medium Synchronization", 92, '#FF9B00', round(grade, 2)
     if 0.67 <= grade <= 0.95:
-        return "Strong Synchronization", 88, '#C2C000'
-    return "Perfect Synchronization", 88, '#359C25'  # 0.96 <= grade <= 1
+        logger.info("Classification level: Strong Synchronization\nSynchronization rate: {grade}")
+        return "Strong Synchronization", 88, '#C2C000', round(grade, 2)
+    logger.info("Classification level: Perfect Synchronization\nSynchronization rate: {grade}")
+    return "Perfect Synchronization", 88, '#359C25', round(grade, 2)  # 0.96 <= grade <= 1
 
 
 class ExecThread:
@@ -392,8 +396,8 @@ class Video:
             self.player = tkvideo(self.path, my_label, loop=1, size=(350, 250))
             self.player.play()
 
-    def video_loader_btn_handler(self):  # TODO: after debug is done, change initial dir to c folder (?)
-        filename_path = filedialog.askopenfilename(initialdir=PATH,
+    def video_loader_btn_handler(self):
+        filename_path = filedialog.askopenfilename(initialdir=config['gui']['video_loader']['folder']['path'],
             title="Select a File",
             filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
 
@@ -522,8 +526,7 @@ class Video:
 
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-                mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS,
-                                        mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
+                mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS, mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
                                         mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
                 cv2.imshow('Detected Video', image)  # TODO: delete
@@ -559,13 +562,13 @@ class Video:
             logger.error("The system couldn't detect an object!")
             raise Exception()
 
-        logger.info("crop video file...")
         Video.crop_video(video_path, output, minX, minY, deltaX, deltaY)
 
         return minX, maxX
 
     @staticmethod
     def crop_video(video_path, output, x_0_ratio, y_0_ratio, deltaX, deltaY):
+        logger.info("*****Crop Video*****")
         cap = cv2.VideoCapture(video_path)  # open the video
         cnt = 0  # initialize frame counter
 
@@ -591,8 +594,7 @@ class Video:
             if ret:
                 crop_frame = frame[y_0:y_0 + h_frame_crop, x_0:x_0 + w_frame_crop]
 
-                logger.info(
-                    f'making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
+                logger.info(f'Making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
 
                 # show progress in percentage
                 xx = cnt * 100 / frames
