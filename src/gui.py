@@ -454,13 +454,11 @@ class App():
     def refresh(self):
         self.__on_closing()
 
-        with subprocess.Popen([r'.\venv\Scripts\python.exe', 'main.py']) as p:  # start a new process to start new analysis
+        with subprocess.Popen([config['python']['interpeter']['path'], 'main.py']) as p:  # start a new process to start new analysis
             sys.exit()
-            # p.wait()  # Wait for the process to complete
-        # TODO: check how the interpeter path works with executable file. Move the path to configuration.
 
         # check the return code of the process
         if p.returncode == 0:
-            print('Script executed successfully')
+            logger.info('Script executed successfully')
         else:
-            print('Script failed')
+            logger.error('Script failed')

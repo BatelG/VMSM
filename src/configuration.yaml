@@ -1,3 +1,6 @@
+python:
+  interpeter:
+      path: '.\venv\Scripts\python.exe'  # TODO change when go to production!
 logger:
   name: vmsm.log
 gui:
