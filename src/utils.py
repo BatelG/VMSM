@@ -9,6 +9,12 @@ import sys
 import tkinter as tk
 from tkinter import filedialog
 import pandas as pnd
+import matplotlib
+# Following throwed error: Tcl_AsyncDelete: async handler deleted by the wrong thread
+# By default matplotlib uses TK gui toolkit, when you're rendering an image without using the toolkit (i.e. into a file or a string),
+# matplotlib still instantiates a window that doesn't get displayed, causing all kinds of problems. In order to avoid that, you should use an Agg backend.
+# It can be activated like so --
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy
 from tkvideo import tkvideo
@@ -222,32 +228,55 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     minX, maxX = Video.detect_object(video_path, config['video_paths']['temp_object'])
 
     # find the other object
+    # TODO: Test the devition the delete the unnecessary code.
+    # if maxX > 0.75 and minX > 0.25:
+    #     flag_object = "right"
+    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
+    #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
+    # elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
+    #     flag_object = "left"
+    #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
+    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
+    # #####
+    # elif maxX > 0.77 and minX > 0.33:
+    #     flag_object = "right"
+    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
+    #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
+    # elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
+    #     flag_object = "left"
+    #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
+    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
+    #####
     if maxX > 0.5 and minX > 0.5:
         flag_object = "right"
         os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
-    elif (maxX < 0.5 and minX < 0.5) or (maxX > 0.5 and minX < 0.5):
+    elif (maxX < 0.5 and minX < 0.5):
         flag_object = "left"
         os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
     #####
-    elif minX > 0.33 and minX > 0.77:
+    elif maxX > 0.77 and minX > 0.33:
         flag_object = "right"
         os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
-    elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
+    elif maxX < 0.77 and minX < 0.33:
         flag_object = "left"
         Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
         os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
     #####
-    elif minX > 0.25 and minX > 0.75:
+    elif maxX > 0.75 and minX > 0.25:
         flag_object = "right"
         os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
         Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
-    elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
+    elif maxX < 0.75 and minX < 0.25:
         flag_object = "left"
         Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
         os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
+    elif (maxX > 0.5 and minX < 0.5) or (maxX > 0.77 and minX < 0.33) or (maxX > 0.75 and minX < 0.25):
+        flag_object = "left"
+        os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
+        Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
 
     # crop the second object from remain video
     if flag_object == "right":
@@ -344,20 +373,28 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
                     logger.error(str(error))
 
     # calculate the syncronization rate
-    lst_avg = []
+    lst_df = []
 
     for dictionary in lst_of_dist_dict_between_objects:
+        lst_col = []
+
         # calculate the avarage distance for each roi
         for roi in dictionary.keys():
-            lst_avg.append(dictionary[roi]['Between Objects'].mean())
+            lst_df.append(dictionary[roi]['Between Objects'])
+            lst_col.append('Between Objects')
 
-    rate = (sum(lst_avg)/len(lst_avg)) if len(lst_avg) > 0 else 1
+    if len(lst_df) == 0:
+        rate = 1
+    else:
+        df = pnd.concat(lst_df, axis=1)
+        df['mean'] = df[lst_col].mean(axis=1)
+        df['final_mean'] = df['mean'].mean()
+        rate = df['final_mean'][0]
 
     return rate, lst_of_dist_dict_between_objects, lst_of_dist_dict_objectA, lst_of_dist_dict_objectB  # avarage distance of all rois
 
-
 # get the synchronization rate and label configuration values, according to the grade
-def get_synchronization_rate(nd, pd):
+def get_synchronization_rate(nd, pd):  # TODO: deside about the levles!
     logger.info("*****Get Synchronization Rate*****")
 
     if nd >= pd:
@@ -399,7 +436,7 @@ class Video:
     def video_loader_btn_handler(self):
         filename_path = filedialog.askopenfilename(initialdir=config['gui']['video_loader']['folder']['path'],
             title="Select a File",
-            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
+            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))  #TODO change to MP4 initial
 
         if filename_path in ["", " "]:
             return False
@@ -586,30 +623,34 @@ class Video:
         out = cv2.VideoWriter(output, 0x7634706d, fps, (w_frame_crop, h_frame_crop))
 
         while cap.isOpened():
-            ret, frame = cap.read()
-            frame = Video.rescaleFrame(frame, scale=1)
-            cnt += 1  # counting frames
+            try:
+                ret, frame = cap.read()
+                frame = Video.rescaleFrame(frame, scale=1)
+                cnt += 1  # counting frames
 
-            # avoid problems when video finish
-            if ret:
-                crop_frame = frame[y_0:y_0 + h_frame_crop, x_0:x_0 + w_frame_crop]
+                # avoid problems when video finish
+                if ret:
+                    crop_frame = frame[y_0:y_0 + h_frame_crop, x_0:x_0 + w_frame_crop]
 
-                logger.info(f'Making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
+                    logger.info(f'Making a cut frame #{cnt} - [x:x + w],[y:y + h] = [{x_0}-{x_0 + w_frame_crop}],[{y_0} - {y_0 + 2 * h_frame_crop}]')
 
-                # show progress in percentage
-                xx = cnt * 100 / frames
-                logger.info(int(xx), '%\n')
+                    # show progress in percentage
+                    xx = cnt * 100 / frames
+                    logger.info(int(xx), '%\n')
 
-                out.write(crop_frame)  # save the new video
+                    out.write(crop_frame)  # save the new video
 
-                # see the video in real time
-                cv2.imshow('frame', frame)  # TODO: delete
-                cv2.imshow('croped', crop_frame)  # TODO: delete
+                    # see the video in real time
+                    cv2.imshow('frame', frame)  # TODO: delete
+                    cv2.imshow('croped', crop_frame)  # TODO: delete
 
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                else:
                     break
-            else:
-                break
+            except Exception as error:
+                logger.error(error)
+                continue
 
         time.sleep(2)
         cap.release()
