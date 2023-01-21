@@ -178,7 +178,7 @@ class App():
             return
 
         self.video_slider_max_val = int(mpy.VideoFileClip(self.video.path).duration)
-        self.rs1.max_val = self.video_slider_max_val
+        self.video_slider.max_val = self.video_slider_max_val
         self.add_video_slider()
         self.stop_progressbar()
 
@@ -203,14 +203,16 @@ class App():
 
         self.disable_widgets()
         self.strat_progressbar()
+        self.analysis_lbl = customtkinter.CTkLabel(master=self.frame_right, text="Analysis in Progress...", text_color='green', font=("Calibri Bold", -20))
+        self.analysis_lbl.grid(row=4, column=0, padx=10, pady=10)
         time.sleep(1)
 
         try:
             if (self.hVar1.get() != 0) or (self.hVar2.get() != self.video_slider_max_val):
-                avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(
+                avg_distance, self.mirrored_object, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(
                     self.video.cut_video(self.hVar1.get(), self.hVar2.get()), selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice, self.pose_roi_choice)
             else:
-                avg_distance, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(
+                avg_distance, self.mirrored_object, self.lst_of_dist_dict_between_objects, self.lst_of_dist_dict_objectA, self.lst_of_dist_dict_objectB = get_synchronization(
                     self.video.path, selected_checkboxes, self.right_hand_roi_choice, self.left_hand_roi_choice, self.pose_roi_choice)
         except Exception as error:
             logger.error(str(error))
@@ -221,6 +223,8 @@ class App():
             # set the 'Synchronization Rate' label
             self.sync_rate_lbl = customtkinter.CTkLabel(master=self.frame_right, text=class_level, text_color=color, font=("Calibri Bold", -20))
             self.sync_rate_lbl.grid(row=7, column=0, columnspan=2, padx=padx, pady=10, sticky="n")
+            
+            self.analysis_lbl.configure(text="Analysis Done!")
 
             # add option to export the analysis result reports (set label and button)
             self.report_lbl = customtkinter.CTkLabel(master=self.frame_left, text="Reports Producer", font=("Calibri Bold", -20))  # font name and size in px
@@ -316,8 +320,8 @@ class App():
                 if choice == 'PDF Report':
                     # create details summery image
                     plt.figure(figsize=(8, 5))
-                    plt.suptitle(f"**Video**\n{os.path.basename(self.video.path)}\n\n**Seconds**\nFrom {self.hVar1.get()} To {self.hVar2.get()}\n\n**Syncronization Rate**\n{self.sync_rate}\n\n**Classification Level**\n{self.sync_rate_lbl._text}\n\n**Percentage Deviation**\n{round(self.slider.get(), 2)}",
-                                fontsize=20, fontweight='bold', x=0.01, y=0.5, ha='left', va='center')
+                    plt.suptitle(f"**Video**\n{os.path.basename(self.video.path)}\n\n**Seconds**\nFrom {self.hVar1.get()} To {self.hVar2.get()}\n\n**Syncronization Rate**\n{self.sync_rate}\n\n**Classification Level**\n{self.sync_rate_lbl._text}\n\n**Percentage Deviation**\n{round(self.slider.get(), 2)}\n\n*{self.mirrored_object} has been transformed!\n\n",
+                                fontsize=18, fontweight='bold', x=0.01, y=0.4, ha='left', va='center')
                     plt.savefig(f'{RES_PATH}Details summery')
 
                     # check if charts were created
@@ -428,10 +432,10 @@ class App():
     def add_video_slider(self):
         self.hVar1 = tk.IntVar()
         self.hVar2 = tk.IntVar()
-        self.rs1 = RangeSliderH(master=self.frame_right, variables=[self.hVar1, self.hVar2], Width=400, Height=65, padX=50, min_val=0, max_val=self.video_slider_max_val, show_value=True,
+        self.video_slider = RangeSliderH(master=self.frame_right, variables=[self.hVar1, self.hVar2], Width=400, Height=65, padX=50, min_val=0, max_val=self.video_slider_max_val, show_value=True,
                                 line_s_color=self.video_slider_line_s, bgColor=self.video_slider_bg, suffix=" sec", digit_precision=".0f", font_size=9, line_color=self.video_slider_line,
                                 font_family="Calibri-bold", bar_color_inner="#1F6AA5", bar_color_outer="#1F6AA5", bar_radius=8, line_width=4)
-        self.rs1.grid(row=4, column=0, padx=10, pady=10)
+        self.video_slider.grid(row=4, column=0, padx=10, pady=10)
 
     def disable_widgets(self):
         self.start_btn.configure(state="disabled")
@@ -439,8 +443,9 @@ class App():
         self.left_hand_roi_choice.configure(state="disabled")
         self.right_hand_roi_choice.configure(state="disabled")
         self.video_explore_btn.grid_forget()
-        self.video_lbl.configure(text="")
-        self.slider.configure(state="disabled")
+        self.video_lbl.grid_forget()
+        self.slider.grid_forget()
+        self.perc_dev_lbl.grid_forget()
 
     def reload_video_handler(self):
         self.video_lbl.configure(text="Reload")
