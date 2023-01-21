@@ -5,6 +5,8 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+**/.vscode
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -30,4 +30,4 @@ video_paths:
   cutted: 'results\\cutted.mp4'
 video_processing:
   allow:
-    following_frames_treshold: 100  # TODO change back to 100
+    following_frames_treshold: 100
