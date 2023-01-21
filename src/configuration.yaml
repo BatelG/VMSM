@@ -1,6 +1,6 @@
 python:
   interpeter:
-      path: '.\venv\Scripts\python.exe'  # TODO change when go to production!
+      path: 'python'  #'.\venv\Scripts\python.exe'
 logger:
   name: vmsm.log
 gui:
@@ -15,9 +15,6 @@ gui:
     height: 400
     pdf:
       name: report.pdf
-  video_loader:
-    folder:
-      path: 'C:\Users\batel\Desktop\Projects\FinalProject\Tests'  # TODO change to C folder.
 video_paths:
   mp4_video: 'results\\origin.mp4'
   temp_object: 'results\\temp_object.mp4'
@@ -31,3 +28,5 @@ video_paths:
 video_processing:
   allow:
     following_frames_treshold: 100
+debug_mode:
+  enable: false

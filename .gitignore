@@ -19,9 +19,6 @@ __pycache__/
 # C extensions
 *.so
 
-# png graphs
-*.png
-
 # test videos
 videos/
 

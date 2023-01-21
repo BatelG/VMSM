@@ -228,24 +228,6 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     minX, maxX = Video.detect_object(video_path, config['video_paths']['temp_object'])
 
     # find the other object
-    # TODO: Test the devition the delete the unnecessary code.
-    # if maxX > 0.75 and minX > 0.25:
-    #     flag_object = "right"
-    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
-    #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
-    # elif (maxX < 0.25 and minX < 0.75) or (maxX > 0.25 and minX < 0.75):
-    #     flag_object = "left"
-    #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
-    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
-    # #####
-    # elif maxX > 0.77 and minX > 0.33:
-    #     flag_object = "right"
-    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['right_object'])
-    #     Video.crop_video(video_path, config['video_paths']['mid_res'], 0, 0, minX, 1) # get the left object
-    # elif (maxX < 0.33 and minX < 0.77) or (maxX > 0.33 and minX < 0.77):
-    #     flag_object = "left"
-    #     Video.crop_video(video_path, config['video_paths']['mid_res'], maxX, 0, 1 - maxX, 1) # get the right object
-    #     os.rename(config['video_paths']['temp_object'], config['video_paths']['left_object'])
     #####
     if maxX > 0.5 and minX > 0.5:
         flag_object = "right"
@@ -302,8 +284,9 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     if width1 + height1 >= width2 + height2:
         new_h = int(height2)
         new_w = int(width2)
-        new_path = config['video_paths']['left_object2']
         path = config['video_paths']['left_object']
+        new_path = config['video_paths']['left_object2']
+        mirrored_object = "Left Object"
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
@@ -319,6 +302,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
         new_w = int(width1)
         path = config['video_paths']['right_object']
         new_path = config['video_paths']['right_object2']
+        mirrored_object = "Right Object"
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
@@ -338,11 +322,9 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
 
     ###############################################################
 
-    lst_df = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
-                    pose_roi_choice, new_path)
+    lst_df = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice, new_path)
 
-    lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice,
-                    pose_roi_choice, config['video_paths']['left_object'])
+    lst_df2 = get_df(selected_checkboxes, right_hand_roi_choice, left_hand_roi_choice, pose_roi_choice, config['video_paths']['left_object'])
 
     lst_of_dist_dict_between_objects = create_distance_chart(lst_df, lst_df2)
     lst_of_dist_dict_objectA = create_distance_chart(lst_df, 'Left Object')
@@ -391,10 +373,10 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
         df['final_mean'] = df['mean'].mean()
         rate = df['final_mean'][0]
 
-    return rate, lst_of_dist_dict_between_objects, lst_of_dist_dict_objectA, lst_of_dist_dict_objectB  # avarage distance of all rois
+    return rate, mirrored_object, lst_of_dist_dict_between_objects, lst_of_dist_dict_objectA, lst_of_dist_dict_objectB  # avarage distance of all rois
 
 # get the synchronization rate and label configuration values, according to the grade
-def get_synchronization_rate(nd, pd):  # TODO: deside about the levles!
+def get_synchronization_rate(nd, pd):
     logger.info("*****Get Synchronization Rate*****")
 
     if nd >= pd:
@@ -434,9 +416,8 @@ class Video:
             self.player.play()
 
     def video_loader_btn_handler(self):
-        filename_path = filedialog.askopenfilename(initialdir=config['gui']['video_loader']['folder']['path'],
-            title="Select a File",
-            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))  #TODO change to MP4 initial
+        filename_path = filedialog.askopenfilename(initialdir=PATH, title="Select a File",
+            filetypes=(("MP4 files", "*.mp4"), ("MOV files", "*.mov"), ("AVI files", "*.avi")))
 
         if filename_path in ["", " "]:
             return False
@@ -566,7 +547,8 @@ class Video:
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS, mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
                                         mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
 
-                cv2.imshow('Detected Video', image)  # TODO: delete
+                if config["debug_mode"]["enable"]:
+                    cv2.imshow('Detected Video', image)
 
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
@@ -592,7 +574,9 @@ class Video:
         logger.info(f'(minX+deltaX,minY+deltaY) = ({minX}+{deltaX},{minY}+{deltaY}) = ({minX + deltaX},{minY + deltaY})')
 
         cap.release()
-        cv2.destroyAllWindows()  # TODO: delete
+
+        if config["debug_mode"]["enable"]:
+            cv2.destroyAllWindows()
 
         # check if the object was detected
         if (abs(minX) > 1) or (abs(maxX) > 1) or (abs(minY) > 1) or (abs(maxY) > 1):
@@ -641,8 +625,9 @@ class Video:
                     out.write(crop_frame)  # save the new video
 
                     # see the video in real time
-                    cv2.imshow('frame', frame)  # TODO: delete
-                    cv2.imshow('croped', crop_frame)  # TODO: delete
+                    if config["debug_mode"]["enable"]:
+                        cv2.imshow('frame', frame)
+                        cv2.imshow('croped', crop_frame)
 
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
@@ -655,4 +640,6 @@ class Video:
         time.sleep(2)
         cap.release()
         out.release()
-        cv2.destroyAllWindows()  # TODO: delete
+        
+        if config["debug_mode"]["enable"]:
+            cv2.destroyAllWindows()
