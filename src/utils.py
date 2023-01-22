@@ -101,8 +101,12 @@ def _create_distance_chart(lst_df, object_str):
                     if (ax_df[idx] == 0 or ay_df[idx] == 0) and (ax_df[idx+1] == 0 or ay_df[idx+1] == 0):
                         number_of_illegal_frames += 1
                         if number_of_illegal_frames == config['video_processing']['allow']['following_frames_treshold']:
-                            logger.info(f'There is not enough data at roi: {key} object - {object_str}')
-                            data_flag = True
+                            try:
+                                logger.info(f'There is not enough data at roi: {key} object - {object_str}')
+                            except Exception:
+                                pass
+                            finally:
+                                data_flag = True
                             break
                         continue
 
@@ -276,7 +280,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     width2 = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     logger.info("Before transformations:")
-    logger.info(f"Left object's video - ({width1},{height1})\nright object's video - ({width2},{height2})\n")
+    logger.info(f"Left object's video - ({width1},{height1})\nRight object's video - ({width2},{height2})\n")
 
     logger.info('Start to do transformations...')
 
@@ -290,6 +294,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
+        logger.info(clip.resize((new_w, new_h)))
         clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
         clip_resized_mirrored.write_videofile(new_path)
 
@@ -306,6 +311,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
 
         clip = mpy.VideoFileClip(path)
         clip_resized = clip.resize((new_w, new_h))
+        logger.info(clip.resize((new_w, new_h)))
         clip_resized_mirrored = moviepy.video.fx.all.mirror_x(clip_resized, apply_to='mask')
         clip_resized_mirrored.write_videofile(new_path)
 
@@ -318,7 +324,7 @@ def get_synchronization(video_path, selected_checkboxes, right_hand_roi_choice, 
     width2 = vid2.get(cv2.CAP_PROP_FRAME_WIDTH)
 
     logger.info("After transformations:")
-    logger.info(f"Left object's video - ({width1},{height1})\right object's video - ({width2},{height2})\n")
+    logger.info(f"Left object's video - ({width1},{height1})\nRight object's video - ({width2},{height2})\n")
 
     ###############################################################
 
@@ -386,15 +392,15 @@ def get_synchronization_rate(nd, pd):
 
     # the second value in 'range' method doesn't count
     if 0 <= grade <= 0.33:
-        logger.info("Classification level: Weak Synchronization\nSynchronization rate: {grade}")
+        logger.info(f"Classification level: Weak Synchronization\nSynchronization rate: {grade}")
         return "Weak Synchronization", 100, '#FF3200', round(grade, 2)
     if 0.34 <= grade <= 0.66:
-        logger.info("Classification level: Medium Synchronization\nSynchronization rate: {grade}")
+        logger.info(f"Classification level: Medium Synchronization\nSynchronization rate: {grade}")
         return "Medium Synchronization", 92, '#FF9B00', round(grade, 2)
     if 0.67 <= grade <= 0.95:
-        logger.info("Classification level: Strong Synchronization\nSynchronization rate: {grade}")
+        logger.info(f"Classification level: Strong Synchronization\nSynchronization rate: {grade}")
         return "Strong Synchronization", 88, '#C2C000', round(grade, 2)
-    logger.info("Classification level: Perfect Synchronization\nSynchronization rate: {grade}")
+    logger.info(f"Classification level: Perfect Synchronization\nSynchronization rate: {grade}")
     return "Perfect Synchronization", 88, '#359C25', round(grade, 2)  # 0.96 <= grade <= 1
 
 
@@ -620,7 +626,7 @@ class Video:
 
                     # show progress in percentage
                     xx = cnt * 100 / frames
-                    logger.info(int(xx), '%\n')
+                    logger.info(f"{int(xx)}%\n")
 
                     out.write(crop_frame)  # save the new video
 
