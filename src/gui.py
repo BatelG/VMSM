@@ -459,7 +459,7 @@ class App():
     def refresh(self):
         self.__on_closing()
 
-        with subprocess.Popen([config['python']['interpeter']['path'], 'start.pyw']) as p:  # start a new process to start new analysis
+        with subprocess.Popen([config['python']['interpeter']['path'], 'main.py']) as p:  # start a new process to start new analysis
             sys.exit()
 
         # check the return code of the process
